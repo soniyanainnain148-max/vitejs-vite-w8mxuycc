@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Gamepad2, Zap, Clock, Plus, RefreshCw, Home, Search, X } from 'lucide-react';
 import StatsCard from './components/StatsCard';
@@ -10,19 +10,28 @@ const chartData = [
 ];
 
 function App() {
-  const [accounts, setAccounts] = useState<any[]>([]);
+  // Accounts ko LocalStorage se load karein
+  const [accounts, setAccounts] = useState<any[]>(() => {
+    const saved = localStorage.getItem('ff_accounts');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nickname, setNickname] = useState('');
   const [uid, setUid] = useState('');
 
-  // Account Add Karne Ka Function
+  // Jab bhi accounts change ho, LocalStorage mein save karein
+  useEffect(() => {
+    localStorage.setItem('ff_accounts', JSON.stringify(accounts));
+  }, [accounts]);
+
   const handleAddAccount = () => {
     if (!nickname || !uid) {
       alert("Kripya Nickname aur UID dono bharein!");
       return;
     }
     const newAccount = {
-      id: Date.now(), // Unique ID
+      id: Date.now(),
       nickname: nickname,
       uid: uid,
       status: 'ONLINE',
@@ -35,7 +44,6 @@ function App() {
     setIsModalOpen(false);
   };
 
-  // Account Delete Karne Ka Function
   const handleDeleteAccount = (id: number) => {
     setAccounts(accounts.filter(acc => acc.id !== id));
   };
@@ -127,7 +135,7 @@ function App() {
         )}
       </div>
 
-      {/* ADD ACCOUNT MODAL (POPUP) */}
+      {/* ADD ACCOUNT MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
