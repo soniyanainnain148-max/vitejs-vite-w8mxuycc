@@ -1,4 +1,4 @@
-export default function StatsCard({ icon, title, value, subtext, color }) {
+export default function StatsCard({ icon, title, value, subtext, color }: any) {
   return (
     <div className="bg-[#1a1d2d] p-4 rounded-2xl border border-gray-800 shadow-lg">
       <div className="flex items-center gap-3 mb-2">
