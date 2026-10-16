@@ -1,6 +1,6 @@
-import { Play, RotateCcw, RefreshCw, Trash2, Shield, CheckCircle2 } from 'lucide-react';
+import { Play, Square, Shield, Trash2 } from 'lucide-react';
 
-export default function AccountCard({ account }: any) {
+export default function AccountCard({ account, onDelete }: any) {
   return (
     <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm w-full">
       <div className="flex justify-between items-start mb-4">
@@ -38,9 +38,9 @@ export default function AccountCard({ account }: any) {
           <Play size={12} /> START
         </button>
         <button className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 py-2 rounded-lg text-[9px] font-bold flex items-center justify-center gap-1 border border-red-200 transition">
-          <Trash2 size={12} /> STOP
+          <Square size={12} /> STOP
         </button>
-        <button className="bg-gray-50 text-gray-500 hover:bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 transition">
+        <button onClick={onDelete} className="bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-500 px-3 py-2 rounded-lg border border-gray-200 transition">
           <Trash2 size={12} />
         </button>
       </div>
