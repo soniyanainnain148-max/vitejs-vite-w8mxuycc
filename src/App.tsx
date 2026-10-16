@@ -1,21 +1,47 @@
 import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, Gamepad2, Zap, Clock, Plus, RefreshCw, Home, Bell, Menu, Search } from 'lucide-react';
+import { Users, Gamepad2, Zap, Clock, Plus, RefreshCw, Home, Search, X } from 'lucide-react';
 import StatsCard from './components/StatsCard';
 import AccountCard from './components/AccountCard';
 
-// Graph empty rakhne ke liye flat data
 const chartData = [
   { time: '0m', glory: 0 }, { time: '5m', glory: 0 },
   { time: '10m', glory: 0 }, { time: '15m', glory: 0 },
 ];
 
-// Accounts list bilkul khaali hai
-const dummyAccounts: any[] = [];
-
 function App() {
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [nickname, setNickname] = useState('');
+  const [uid, setUid] = useState('');
+
+  // Account Add Karne Ka Function
+  const handleAddAccount = () => {
+    if (!nickname || !uid) {
+      alert("Kripya Nickname aur UID dono bharein!");
+      return;
+    }
+    const newAccount = {
+      id: Date.now(), // Unique ID
+      nickname: nickname,
+      uid: uid,
+      status: 'ONLINE',
+      created: 'Just now',
+      played: 0
+    };
+    setAccounts([...accounts, newAccount]);
+    setNickname('');
+    setUid('');
+    setIsModalOpen(false);
+  };
+
+  // Account Delete Karne Ka Function
+  const handleDeleteAccount = (id: number) => {
+    setAccounts(accounts.filter(acc => acc.id !== id));
+  };
+
   return (
-    <div className="min-h-screen bg-[#f8f9fa] p-4 max-w-7xl mx-auto text-gray-800 font-sans">
+    <div className="min-h-screen bg-[#f8f9fa] p-4 max-w-7xl mx-auto text-gray-800 font-sans relative">
       
       {/* Top Navbar */}
       <div className="flex justify-between items-center mb-6">
@@ -30,7 +56,7 @@ function App() {
         </div>
         <div className="flex items-center gap-2">
           <button className="bg-white text-gray-700 border border-gray-200 px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm hover:bg-gray-50 transition"><RefreshCw size={12} /> Refresh</button>
-          <button className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-md shadow-purple-200 transition"><Plus size={12} /> Add Account</button>
+          <button onClick={() => setIsModalOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-md shadow-purple-200 transition"><Plus size={12} /> Add Account</button>
         </div>
       </div>
 
@@ -38,15 +64,15 @@ function App() {
         <span className="text-[10px] text-gray-400 font-bold tracking-wider">● LIVE UPDATES</span>
       </div>
 
-      {/* Top Stats (Sab Zero) */}
+      {/* Top Stats */}
       <div className="flex overflow-x-auto gap-3 mb-6 pb-2 scrollbar-hide">
-        <StatsCard icon={<Users size={16} />} title="TOTAL ACCOUNTS" value="0" subtext="0 in match" color="text-pink-500" bgColor="bg-pink-50" />
+        <StatsCard icon={<Users size={16} />} title="TOTAL ACCOUNTS" value={accounts.length.toString()} subtext={`${accounts.filter(a => a.status === 'ONLINE').length} online`} color="text-pink-500" bgColor="bg-pink-50" />
         <StatsCard icon={<Gamepad2 size={16} />} title="MATCHES PLAYED" value="0" subtext="~0 / hour" color="text-blue-500" bgColor="bg-blue-50" />
         <StatsCard icon={<Zap size={16} />} title="GLORY EARNED" value="+0" subtext="~0 Glory / hr" color="text-red-500" bgColor="bg-red-50" />
         <StatsCard icon={<Clock size={16} />} title="SYSTEM UPTIME" value="00:00:00" subtext="0 accounts running" color="text-purple-500" bgColor="bg-purple-50" />
       </div>
 
-      {/* Live Graph (Zero Line) */}
+      {/* Live Graph */}
       <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-[0_2px_15px_rgba(0,0,0,0.03)] mb-6">
         <div className="flex justify-between items-start mb-4">
           <div>
@@ -56,12 +82,8 @@ function App() {
               <span className="text-green-600 text-[10px] bg-green-50 px-2 py-0.5 rounded border border-green-100 font-semibold">+0 in the last 0s</span>
             </div>
           </div>
-          <div className="flex gap-1 text-[9px] bg-gray-50 p-1 rounded-lg border border-gray-200">
-            <button className="bg-purple-600 text-white px-3 py-1 rounded font-bold shadow-sm">GLORY</button>
-          </div>
         </div>
         
-        {/* Dark Chart Area */}
         <div className="bg-[#0f111a] rounded-xl p-4 h-56 w-full relative">
           <div className="absolute top-4 left-4 bg-gray-800 text-white text-[9px] px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
             <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span> LIVE
@@ -81,38 +103,70 @@ function App() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        
-        <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-gray-100 text-[10px]">
-          <div><span className="text-gray-400 font-bold block mb-1">NOW</span><span className="text-gray-900 font-bold">+0</span></div>
-          <div><span className="text-gray-400 font-bold block mb-1">PEAK</span><span className="text-gray-900 font-bold">+0</span></div>
-          <div><span className="text-gray-400 font-bold block mb-1">AVERAGE</span><span className="text-gray-900 font-bold">+0</span></div>
-        </div>
       </div>
 
       {/* Accounts Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
         <h3 className="text-gray-400 text-[10px] font-bold tracking-wider flex items-center gap-2"><Users size={14}/> ACCOUNTS</h3>
-        
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:flex-none">
-            <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Search UID or nickname..." className="bg-white text-gray-800 text-xs pl-9 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-purple-500 w-full md:w-64 shadow-sm" />
-          </div>
+        <div className="relative flex-1 md:flex-none">
+          <Search size={14} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input type="text" placeholder="Search UID or nickname..." className="bg-white text-gray-800 text-xs pl-9 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:border-purple-500 w-full md:w-64 shadow-sm" />
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {dummyAccounts.length === 0 ? (
+        {accounts.length === 0 ? (
           <div className="col-span-1 md:col-span-2 text-center py-10 bg-white rounded-2xl border border-gray-200 border-dashed">
             <p className="text-gray-400 text-sm font-bold">No accounts added yet.</p>
             <p className="text-gray-400 text-xs mt-1">Click "Add Account" to start pushing Glory.</p>
           </div>
         ) : (
-          dummyAccounts.map(acc => (
-            <AccountCard key={acc.id} account={acc} />
+          accounts.map(acc => (
+            <AccountCard key={acc.id} account={acc} onDelete={() => handleDeleteAccount(acc.id)} />
           ))
         )}
       </div>
+
+      {/* ADD ACCOUNT MODAL (POPUP) */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <X size={20} />
+            </button>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Add Free Fire Account</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-gray-500 block mb-1">Nickname</label>
+                <input 
+                  type="text" 
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="e.g. Power4m2c8g" 
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-purple-500 text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 block mb-1">UID</label>
+                <input 
+                  type="text" 
+                  value={uid}
+                  onChange={(e) => setUid(e.target.value)}
+                  placeholder="e.g. 18742319399" 
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-purple-500 text-gray-900"
+                />
+              </div>
+              <button 
+                onClick={handleAddAccount}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition shadow-md shadow-purple-200 mt-2"
+              >
+                SAVE ACCOUNT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
