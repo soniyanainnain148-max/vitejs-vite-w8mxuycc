@@ -1,5 +1,5 @@
 import { Play, RotateCcw, RefreshCw, Trash2, Shield, CheckCircle2 } from 'lucide-react';
-export default function AccountCard({ account, isSelected, onSelect }) {
+export default function AccountCard({ account, isSelected, onSelect }: any) {
   const progress = (account.currentExp / account.maxExp) * 100;
   return (
     <div className={`p-4 rounded-2xl border shadow-lg transition-all cursor-pointer ${isSelected ? 'border-purple-500 bg-purple-900/20' : 'bg-[#1a1d2d] border-gray-800'}`} onClick={onSelect}>
