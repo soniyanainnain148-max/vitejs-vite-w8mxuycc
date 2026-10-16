@@ -9,15 +9,15 @@
     "lint": "oxlint",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "tailwindcss": "latest",
-    "postcss": "latest",
-    "autoprefixer": "latest",
-    "recharts": "latest",
-    "lucide-react": "latest",
-    "@tailwindcss/vite": "latest"
+"dependencies": {
+  "react": "^19.3.0",
+  "react-dom": "^19.3.0",
+  "tailwindcss": "latest",
+  "postcss": "latest",
+  "autoprefixer": "latest",
+  "recharts": "latest",
+  "lucide-react": "latest",
+  "@tailwindcss/postcss": "latest"
 },
   "devDependencies": {
     "@types/node": "^24.19.2",
