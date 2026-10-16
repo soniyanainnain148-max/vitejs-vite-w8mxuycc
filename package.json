@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview"
   },
-""dependencies": {
+"dependencies": {
   "react": "^19.3.0",
   "react-dom": "^19.3.0",
   "tailwindcss": "latest",
