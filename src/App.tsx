@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, Gamepad2, Zap, Clock, Plus, RefreshCw, Home, Search, X } from 'lucide-react';
+import { Users, Gamepad2, Zap, Clock, Plus, RefreshCw, Home, Search, X, Loader2 } from 'lucide-react';
 import StatsCard from './components/StatsCard';
 import AccountCard from './components/AccountCard';
+import { db } from './firebase';
+import { collection, addDoc, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 
 const chartData = [
   { time: '0m', glory: 0 }, { time: '5m', glory: 0 },
@@ -10,42 +12,57 @@ const chartData = [
 ];
 
 function App() {
-  // Accounts ko LocalStorage se load karein
-  const [accounts, setAccounts] = useState<any[]>(() => {
-    const saved = localStorage.getItem('ff_accounts');
-    return saved ? JSON.parse(saved) : [];
-  });
-  
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nickname, setNickname] = useState('');
   const [uid, setUid] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Jab bhi accounts change ho, LocalStorage mein save karein
+  // Firebase se Realtime Data Fetch Karein
   useEffect(() => {
-    localStorage.setItem('ff_accounts', JSON.stringify(accounts));
-  }, [accounts]);
+    const unsubscribe = onSnapshot(collection(db, "accounts"), (snapshot) => {
+      const accountsData = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      }));
+      setAccounts(accountsData);
+      setIsLoading(false);
+    });
+    return () => unsubscribe(); 
+  }, []);
 
-  const handleAddAccount = () => {
+  const handleAddAccount = async () => {
     if (!nickname || !uid) {
       alert("Kripya Nickname aur UID dono bharein!");
       return;
     }
-    const newAccount = {
-      id: Date.now(),
-      nickname: nickname,
-      uid: uid,
-      status: 'ONLINE',
-      created: 'Just now',
-      played: 0
-    };
-    setAccounts([...accounts, newAccount]);
-    setNickname('');
-    setUid('');
-    setIsModalOpen(false);
+    
+    try {
+      await addDoc(collection(db, "accounts"), {
+        nickname: nickname,
+        uid: uid,
+        status: 'ONLINE',
+        created: 'Just now',
+        played: 0,
+        createdAt: new Date()
+      });
+      setNickname('');
+      setUid('');
+      setIsModalOpen(false);
+    } catch (error) {
+      alert("Account add nahi ho paya. Internet check karein!");
+      console.error(error);
+    }
   };
 
-  const handleDeleteAccount = (id: number) => {
-    setAccounts(accounts.filter(acc => acc.id !== id));
+  const handleDeleteAccount = async (id: string) => {
+    if (window.confirm("Kya aap is account ko delete karna chahte hain?")) {
+      try {
+        await deleteDoc(doc(db, "accounts", id));
+      } catch (error) {
+        alert("Delete nahi ho paya!");
+      }
+    }
   };
 
   return (
@@ -123,7 +140,12 @@ function App() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {accounts.length === 0 ? (
+        {isLoading ? (
+          <div className="col-span-1 md:col-span-2 text-center py-10 bg-white rounded-2xl border border-gray-200">
+            <Loader2 className="animate-spin text-purple-600 mx-auto mb-2" size={24} />
+            <p className="text-gray-400 text-xs font-bold">Loading accounts from database...</p>
+          </div>
+        ) : accounts.length === 0 ? (
           <div className="col-span-1 md:col-span-2 text-center py-10 bg-white rounded-2xl border border-gray-200 border-dashed">
             <p className="text-gray-400 text-sm font-bold">No accounts added yet.</p>
             <p className="text-gray-400 text-xs mt-1">Click "Add Account" to start pushing Glory.</p>
