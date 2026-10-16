@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Users, Gamepad2, Zap, Clock, Plus, Swords, Crosshair, Play } from 'lucide-react';
 import StatsCard from './components/StatsCard';
 import AccountCard from './components/AccountCard';
