@@ -2,9 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const Razorpay = require('razorpay');
 const admin = require('firebase-admin');
+const crypto = require('crypto'); // Signature verify karne ke liye zaroori hai
 
 const app = express();
-app.use(cors());
+
+// CORS setup (Taaki aapki Vercel website backend se baat kar sake)
+app.use(cors()); 
 app.use(express.json());
 
 // 1. Razorpay Setup (Keys Render ke Environment Variables se aayengi)
@@ -14,24 +17,32 @@ const razorpay = new Razorpay({
 });
 
 // 2. Firebase Admin Setup (Database mein credits add karne ke liye)
-// Aapko Firebase Console -> Project Settings -> Service Accounts se ek JSON file milegi.
-// Us JSON ko Render ke ENV variable (FIREBASE_SERVICE_ACCOUNT) mein daalna hoga.
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+  try {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("Firebase Admin Initialized Successfully");
+  } catch (error) {
+    console.error("Firebase Admin Init Error: Check your JSON format", error);
+  }
 } else {
-  console.log("Warning: Firebase Service Account not found. Database updates will fail.");
+  console.log("Warning: FIREBASE_SERVICE_ACCOUNT ENV missing.");
 }
 
-// 3. API Endpoint: Create Order (Frontend isko call karega)
+// 3. API: Create Order (Jab user Top-up dabayega)
 app.post('/create-order', async (req, res) => {
   try {
     const { amount } = req.body; // Amount in INR (e.g., 50)
     
+    // Validation
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid amount" });
+    }
+
     const options = {
-      amount: amount * 100, // Razorpay amount in paise (50 INR = 5000 paise)
+      amount: amount * 100, // Razorpay amount in paise (₹50 = 5000 paise)
       currency: "INR",
       receipt: `receipt_${Date.now()}`
     };
@@ -39,42 +50,46 @@ app.post('/create-order', async (req, res) => {
     const order = await razorpay.orders.create(options);
     res.json({ success: true, order: order });
   } catch (error) {
+    console.error("Order Creation Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// 4. API Endpoint: Verify Payment (Payment ke baad Frontend call karega)
+// 4. API: Verify Payment (Jab payment successful ho jaye)
 app.post('/verify-payment', async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, creditsToAdd } = req.body;
 
-    // Signature Verify Karna (Security ke liye)
+    // Security Check: Signature verify karna (Taaki koi fake payment na kar sake)
     const body = razorpay_order_id + "|" + razorpay_payment_id;
-    const crypto = require('crypto');
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body.toString())
       .digest("hex");
 
+    // Agar signature match ho gaya (Payment 100% Real hai)
     if (expectedSignature === razorpay_signature) {
-      // Payment Real Hai! Ab Database mein Credits badhao.
+      
+      // Firebase Database mein Credits Add karo
       const db = admin.firestore();
       const userRef = db.collection('users').doc(userId);
       
       await userRef.set({
         credits: admin.firestore.FieldValue.increment(Number(creditsToAdd))
-      }, { merge: true });
+      }, { merge: true }); // Merge true taaki purana data delete na ho
 
       res.json({ success: true, message: "Payment Verified & Credits Added" });
     } else {
-      res.status(400).json({ success: false, message: "Invalid Signature" });
+      res.status(400).json({ success: false, message: "Invalid Signature (Fake Payment)" });
     }
   } catch (error) {
+    console.error("Verification Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-app.get('/', (req, res) => res.send('Backend is running perfectly!'));
+// Test Route (Render par check karne ke liye)
+app.get('/', (req, res) => res.send('WebCraft Backend is running perfectly!'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
