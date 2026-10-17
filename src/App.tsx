@@ -1,23 +1,31 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, DollarSign, Package, TrendingUp, Plus, Home, Search, X, Loader2, Store } from 'lucide-react';
+import { Users, DollarSign, Package, TrendingUp, Plus, Home, Search, X, Loader2, Store, Wand2, Trash } from 'lucide-react';
 import StatsCard from './components/StatsCard';
 import AccountCard from './components/AccountCard';
 import { db } from './firebase';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, writeBatch } from "firebase/firestore";
 
 const chartData = [
-  { day: 'Mon', sales: 500 }, { day: 'Tue', sales: 1200 },
-  { day: 'Wed', sales: 800 }, { day: 'Thu', sales: 2400 },
-  { day: 'Fri', sales: 1900 }, { day: 'Sat', sales: 3100 },
-  { day: 'Sun', sales: 4500 },
+  { day: 'Mon', sales: 1500 }, { day: 'Tue', sales: 3200 },
+  { day: 'Wed', sales: 2800 }, { day: 'Thu', sales: 5400 },
+  { day: 'Fri', sales: 4900 }, { day: 'Sat', sales: 8100 },
+  { day: 'Sun', sales: 12500 },
+];
+
+// Demo Data for Advertisement
+const demoAccounts = [
+  { nickname: 'FF Level 75 | Evo AK', uid: '18742319399', skins: 'Evo AK, Mythic Dress, Heroic', buyPrice: 3500, sellPrice: 5000, status: 'AVAILABLE' },
+  { nickname: 'BGMI Conqueror ID', uid: '5512345678', skins: 'Glacier M416, Mythic Outfits', buyPrice: 8000, sellPrice: 12000, status: 'AVAILABLE' },
+  { nickname: 'FF Rare ID | Season 1', uid: '1234567890', skins: 'Old Skins, Elite Passes', buyPrice: 15000, sellPrice: 22000, status: 'SOLD' },
+  { nickname: 'COD Mobile Legendary', uid: '6677889900', skins: 'Legendary Weapons', buyPrice: 2000, sellPrice: 2800, status: 'AVAILABLE' },
+  { nickname: 'FF Guest ID Bundle', uid: '9988776655', skins: 'Basic Skins', buyPrice: 200, sellPrice: 400, status: 'SOLD' },
 ];
 
 function App() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Form States
   const [accName, setAccName] = useState('');
   const [uid, setUid] = useState('');
   const [skins, setSkins] = useState('');
@@ -25,6 +33,7 @@ function App() {
   const [sellPrice, setSellPrice] = useState('');
   
   const [isLoading, setIsLoading] = useState(true);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "game_accounts"), (snapshot) => {
@@ -35,22 +44,34 @@ function App() {
     return () => unsubscribe(); 
   }, []);
 
+  // FUNCTION TO LOAD DEMO DATA
+  const loadDemoData = async () => {
+    if (!window.confirm("Yeh 5 dummy accounts add karega advertisement ke liye. Aage badhein?")) return;
+    setIsDemoLoading(true);
+    try {
+      const batch = writeBatch(db);
+      demoAccounts.forEach((acc) => {
+        const newDocRef = doc(collection(db, "game_accounts"));
+        batch.set(newDocRef, { ...acc, createdAt: new Date() });
+      });
+      await batch.commit();
+      alert("Demo Data Loaded Successfully! Ab aap screenshot le sakte hain.");
+    } catch (error) {
+      alert("Demo data load nahi ho paya!");
+    }
+    setIsDemoLoading(false);
+  };
+
   const handleAddAccount = async () => {
     if (!accName || !uid || !buyPrice || !sellPrice) return alert("Saari details bharein!");
     try {
       await addDoc(collection(db, "game_accounts"), {
-        nickname: accName,
-        uid: uid,
-        skins: skins || 'Basic Account',
-        buyPrice: Number(buyPrice),
-        sellPrice: Number(sellPrice),
-        status: 'AVAILABLE',
-        createdAt: new Date()
+        nickname: accName, uid: uid, skins: skins || 'Basic Account',
+        buyPrice: Number(buyPrice), sellPrice: Number(sellPrice),
+        status: 'AVAILABLE', createdAt: new Date()
       });
       setAccName(''); setUid(''); setSkins(''); setBuyPrice(''); setSellPrice(''); setIsModalOpen(false);
-    } catch (error) {
-      alert("Error adding account!");
-    }
+    } catch (error) { alert("Error adding account!"); }
   };
 
   const handleDeleteAccount = async (id: string) => {
@@ -61,11 +82,9 @@ function App() {
     await updateDoc(doc(db, "game_accounts", id), { status: newStatus });
   };
 
-  // Stats calculate
   const totalStock = accounts.length;
   const availableStock = accounts.filter(a => a.status === 'AVAILABLE').length;
   const soldStock = accounts.filter(a => a.status === 'SOLD').length;
-  
   const totalProfit = accounts.filter(a => a.status === 'SOLD').reduce((sum, a) => sum + ((a.sellPrice || 0) - (a.buyPrice || 0)), 0);
   const totalInventoryValue = accounts.filter(a => a.status === 'AVAILABLE').reduce((sum, a) => sum + (a.sellPrice || 0), 0);
 
@@ -73,7 +92,7 @@ function App() {
     <div className="min-h-screen bg-[#f8f9fa] p-4 max-w-7xl mx-auto text-gray-800 font-sans relative">
       
       {/* Top Navbar */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="flex items-center gap-3">
           <Home className="text-gray-400" size={20} />
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
@@ -83,9 +102,17 @@ function App() {
             <span className="font-bold text-xs tracking-wide text-gray-900">ARPIT | Account Reseller</span>
           </div>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow-md shadow-purple-200 transition">
-          <Plus size={14} /> Add Account
-        </button>
+        
+        {/* Buttons Area */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <button onClick={loadDemoData} disabled={isDemoLoading} className="flex-1 md:flex-none bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm transition">
+            {isDemoLoading ? <Loader2 size={14} className="animate-spin"/> : <Wand2 size={14} />} Load Demo Ads
+          </button>
+          
+          <button onClick={() => setIsModalOpen(true)} className="flex-1 md:flex-none bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-md shadow-purple-200 transition">
+            <Plus size={14} /> Add Account
+          </button>
+        </div>
       </div>
 
       {/* Top Stats */}
@@ -144,7 +171,7 @@ function App() {
         ) : accounts.length === 0 ? (
           <div className="col-span-1 md:col-span-2 text-center py-10 bg-white rounded-2xl border border-gray-200 border-dashed">
             <p className="text-gray-400 text-sm font-bold">No accounts in stock.</p>
-            <p className="text-gray-400 text-xs mt-1">Click "Add Account" to list a new ID.</p>
+            <p className="text-gray-400 text-xs mt-1">Click "Load Demo Ads" to see how it looks, or "Add Account".</p>
           </div>
         ) : (
           accounts.map(acc => (
@@ -196,4 +223,4 @@ function App() {
   );
 }
 
-export default App; // YEH LINE AB ADD HAI
+export default App;
