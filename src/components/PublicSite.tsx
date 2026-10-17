@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Shield, Youtube, MessageCircle, Copy, Check, Loader2, Sparkles } from 'lucide-react';
+import { Shield, Video, MessageCircle, Copy, Check, Loader2, Sparkles } from 'lucide-react';
 
 export default function PublicSite({ slug }: { slug: string }) {
   const [siteData, setSiteData] = useState<any>(null);
@@ -58,7 +58,7 @@ export default function PublicSite({ slug }: { slug: string }) {
           <h1 className={`text-3xl font-bold mb-1 ${textClass}`}>{siteData.siteName}</h1>
           <p className="text-sm opacity-70 text-center mb-6 px-4">Gaming Creator | Pro Player</p>
 
-          {/* Unique Feature: UID Copy (Jo prompt se aaya) */}
+          {/* Unique Feature: UID Copy */}
           <div className="w-full bg-black/30 border border-current/20 rounded-xl p-3 flex justify-between items-center mb-6">
             <div>
               <p className="text-[10px] uppercase font-bold opacity-60">My Free Fire UID</p>
@@ -69,10 +69,10 @@ export default function PublicSite({ slug }: { slug: string }) {
             </button>
           </div>
 
-          {/* Links */}
+          {/* Links (Yahan Youtube ki jagah Video icon use kiya hai) */}
           <div className="w-full space-y-3">
             <a href="#" className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition shadow-lg">
-              <Youtube size={18} /> Subscribe on YouTube
+              <Video size={18} /> Subscribe on YouTube
             </a>
             <a href="#" className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition shadow-lg">
               <MessageCircle size={18} /> Join Discord Server
@@ -86,4 +86,4 @@ export default function PublicSite({ slug }: { slug: string }) {
       </div>
     </div>
   );
-      }
+}
