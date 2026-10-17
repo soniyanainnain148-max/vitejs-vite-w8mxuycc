@@ -66,7 +66,6 @@ function App() {
   const availableStock = accounts.filter(a => a.status === 'AVAILABLE').length;
   const soldStock = accounts.filter(a => a.status === 'SOLD').length;
   
-  // Profit calculate (sirf sold accounts ka)
   const totalProfit = accounts.filter(a => a.status === 'SOLD').reduce((sum, a) => sum + ((a.sellPrice || 0) - (a.buyPrice || 0)), 0);
   const totalInventoryValue = accounts.filter(a => a.status === 'AVAILABLE').reduce((sum, a) => sum + (a.sellPrice || 0), 0);
 
@@ -196,3 +195,5 @@ function App() {
     </div>
   );
 }
+
+export default App; // YEH LINE AB ADD HAI
