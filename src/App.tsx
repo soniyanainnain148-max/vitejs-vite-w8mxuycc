@@ -7,8 +7,8 @@ import { db } from './firebase';
 import { collection, addDoc, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 
 const chartData = [
-  { time: '0m', glory: 0 }, { time: '5m', glory: 0 },
-  { time: '10m', glory: 0 }, { time: '15m', glory: 0 },
+  { time: '0m', xp: 0 }, { time: '5m', xp: 0 },
+  { time: '10m', xp: 0 }, { time: '15m', xp: 0 },
 ];
 
 function App() {
@@ -18,7 +18,6 @@ function App() {
   const [uid, setUid] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Firebase se Realtime Data Fetch Karein
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "accounts"), (snapshot) => {
       const accountsData = snapshot.docs.map(doc => ({ 
@@ -36,7 +35,6 @@ function App() {
       alert("Kripya Nickname aur UID dono bharein!");
       return;
     }
-    
     try {
       await addDoc(collection(db, "accounts"), {
         nickname: nickname,
@@ -51,7 +49,6 @@ function App() {
       setIsModalOpen(false);
     } catch (error) {
       alert("Account add nahi ho paya. Internet check karein!");
-      console.error(error);
     }
   };
 
@@ -76,7 +73,7 @@ function App() {
             <span className="text-green-500 text-[10px] font-bold border border-green-200 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-1">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> LIVE
             </span>
-            <span className="font-bold text-xs tracking-wide text-gray-900">ARPIT | Glory Push Bot</span>
+            <span className="font-bold text-xs tracking-wide text-gray-900">ARPIT | Mini Militia XP Bot</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -93,7 +90,7 @@ function App() {
       <div className="flex overflow-x-auto gap-3 mb-6 pb-2 scrollbar-hide">
         <StatsCard icon={<Users size={16} />} title="TOTAL ACCOUNTS" value={accounts.length.toString()} subtext={`${accounts.filter(a => a.status === 'ONLINE').length} online`} color="text-pink-500" bgColor="bg-pink-50" />
         <StatsCard icon={<Gamepad2 size={16} />} title="MATCHES PLAYED" value="0" subtext="~0 / hour" color="text-blue-500" bgColor="bg-blue-50" />
-        <StatsCard icon={<Zap size={16} />} title="GLORY EARNED" value="+0" subtext="~0 Glory / hr" color="text-red-500" bgColor="bg-red-50" />
+        <StatsCard icon={<Zap size={16} />} title="XP EARNED" value="+0" subtext="~0 XP / hr" color="text-red-500" bgColor="bg-red-50" />
         <StatsCard icon={<Clock size={16} />} title="SYSTEM UPTIME" value="00:00:00" subtext="0 accounts running" color="text-purple-500" bgColor="bg-purple-50" />
       </div>
 
@@ -101,7 +98,7 @@ function App() {
       <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-[0_2px_15px_rgba(0,0,0,0.03)] mb-6">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="text-gray-400 text-[10px] font-bold tracking-wider">TOTAL GLORY GAINED</h3>
+            <h3 className="text-gray-400 text-[10px] font-bold tracking-wider">TOTAL XP GAINED</h3>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-2xl font-bold text-gray-900">+0</span>
               <span className="text-green-600 text-[10px] bg-green-50 px-2 py-0.5 rounded border border-green-100 font-semibold">+0 in the last 0s</span>
@@ -124,7 +121,7 @@ function App() {
               <XAxis dataKey="time" stroke="#4b5563" fontSize={9} tickLine={false} axisLine={false} />
               <YAxis stroke="#4b5563" fontSize={9} tickLine={false} axisLine={false} domain={[0, 100]} />
               <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', fontSize: '10px', color: '#fff' }} />
-              <Area type="monotone" dataKey="glory" stroke="#ec4899" strokeWidth={2} fillOpacity={1} fill="url(#colorExp)" />
+              <Area type="monotone" dataKey="xp" stroke="#ec4899" strokeWidth={2} fillOpacity={1} fill="url(#colorExp)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -148,7 +145,7 @@ function App() {
         ) : accounts.length === 0 ? (
           <div className="col-span-1 md:col-span-2 text-center py-10 bg-white rounded-2xl border border-gray-200 border-dashed">
             <p className="text-gray-400 text-sm font-bold">No accounts added yet.</p>
-            <p className="text-gray-400 text-xs mt-1">Click "Add Account" to start pushing Glory.</p>
+            <p className="text-gray-400 text-xs mt-1">Click "Add Account" to start farming XP.</p>
           </div>
         ) : (
           accounts.map(acc => (
@@ -164,7 +161,7 @@ function App() {
             <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
               <X size={20} />
             </button>
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Add Free Fire Account</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Add Mini Militia Account</h2>
             
             <div className="space-y-4">
               <div>
@@ -173,17 +170,17 @@ function App() {
                   type="text" 
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}
-                  placeholder="e.g. Power4m2c8g" 
+                  placeholder="e.g. ArpitPro" 
                   className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-purple-500 text-gray-900"
                 />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-500 block mb-1">UID</label>
+                <label className="text-xs font-bold text-gray-500 block mb-1">Player ID / UID</label>
                 <input 
                   type="text" 
                   value={uid}
                   onChange={(e) => setUid(e.target.value)}
-                  placeholder="e.g. 18742319399" 
+                  placeholder="e.g. 12345678" 
                   className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2.5 text-sm focus:outline-none focus:border-purple-500 text-gray-900"
                 />
               </div>
