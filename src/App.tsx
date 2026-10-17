@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Loader2, Code2, Wallet, Zap, Sparkles, Send, Bot, ExternalLink, Copy, Check, X, QrCode, ShieldCheck, Smartphone } from 'lucide-react';
+import { Globe, Loader2, Code2, Wallet, Zap, Sparkles, Send, Bot, ExternalLink, Copy, Check, X, QrCode, ShieldCheck } from 'lucide-react';
 import PublicSite from './components/PublicSite';
 import { db } from './firebase';
 import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
@@ -21,16 +21,16 @@ function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [mySiteId, setMySiteId] = useState<string | null>(localStorage.getItem('my_site_id'));
 
-  // Payment States
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 👇 YAHAN APNI FAMPAY UPI ID DAALEIN 👇
-  const FAMPAY_UPI_ID = "arpit@fam"; 
+  // 👇 ENV VARIABLES 👇
+  const FAMPAY_UPI_ID = import.meta.env.VITE_FAMPAY_UPI_ID || "yourdefault@fam"; 
+  const FAMPAY_QR_URL = import.meta.env.VITE_FAMPAY_QR_URL || "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=demo@fam"; // Fallback URL
+  
   const TOPUP_AMOUNT = 50;
   const CREDITS_TO_ADD = 5;
-  
   const USER_ID = "user_arpit_123"; 
 
   useEffect(() => {
@@ -40,7 +40,7 @@ function Dashboard() {
       if (snap.exists()) {
         setCredits(snap.data().credits || 0);
       } else {
-        await setDoc(userRef, { credits: 5 }); // Naye user ko 5 credits
+        await setDoc(userRef, { credits: 5 }); 
       }
     };
     fetchUser();
@@ -53,10 +53,9 @@ function Dashboard() {
   }, []);
 
   const handleVerifyPayment = async () => {
-    if (utr.length < 8) return alert("Kripya valid UTR / Transaction ID daalein!");
+    if (utr.length < 8) return alert("Kripya valid 12-digit UTR / Transaction ID daalein!");
     setIsVerifying(true);
     
-    // Payment Verify Simulation (FamPay ka koi API nahi hai, isliye manual check ka simulation)
     setTimeout(async () => {
       try {
         const userRef = doc(db, "users", USER_ID);
@@ -100,7 +99,6 @@ function Dashboard() {
           themeType, hasYoutube, hasDiscord, createdAt: new Date()
         });
         
-        // Credits kam karna
         const userRef = doc(db, "users", USER_ID);
         await updateDoc(userRef, { credits: credits - 1 });
         
@@ -169,7 +167,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Prompt Box */}
         <div className="bg-white border border-gray-200 rounded-[2rem] p-2 mb-10 shadow-sm">
           <div className="bg-white rounded-[1.5rem] p-6 relative">
             <div className="flex items-center gap-2 mb-4">
@@ -193,7 +190,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* User's Generated Site */}
         {mySiteId && !isGenerating && (
           <div>
             <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2"><Globe size={16} className="text-purple-600"/> YOUR LIVE WEBSITE</h3>
@@ -217,7 +213,7 @@ function Dashboard() {
         )}
       </div>
 
-      {/* 🟢 FAMPAY TOP-UP MODAL */}
+      {/* 🟢 FAMPAY TOP-UP MODAL with CUSTOM QR */}
       {isTopUpOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
@@ -231,16 +227,16 @@ function Dashboard() {
               <p className="text-xs text-gray-500 mt-1">Pay ₹{TOPUP_AMOUNT} to get {CREDITS_TO_ADD} Credits</p>
             </div>
 
-            {/* QR Code */}
+            {/* 🟢 APNA KHUD KA QR CODE YAHAN DIKHEGA */}
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col items-center mb-4">
               <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${FAMPAY_UPI_ID}%26pn=AI%20WebCraft%26am=${TOPUP_AMOUNT}%26cu=INR`} 
-                alt="UPI QR" className="w-32 h-32 rounded-lg border-2 border-purple-200"
+                src={FAMPAY_QR_URL} 
+                alt="FamPay QR" 
+                className="w-40 h-40 rounded-lg object-contain border-2 border-purple-200 bg-white" 
               />
               <p className="text-[10px] text-gray-400 mt-2 font-bold uppercase">Scan with GPay / FamPay / Paytm</p>
             </div>
 
-            {/* UPI ID Copy */}
             <div className="flex justify-between items-center bg-gray-50 border border-gray-200 p-3 rounded-xl mb-6">
               <div>
                 <p className="text-[9px] text-gray-500 font-bold">MY FAMPAY UPI</p>
@@ -249,9 +245,8 @@ function Dashboard() {
               <button onClick={copyUpi} className="text-purple-600 bg-purple-50 p-2 rounded-lg hover:bg-purple-100"><Copy size={16}/></button>
             </div>
 
-            {/* UTR Input */}
             <div className="mb-4">
-              <label className="text-xs font-bold text-gray-600 block mb-1">Enter UTR / Transaction ID</label>
+              <label className="text-xs font-bold text-gray-600 block mb-1">Enter 12-Digit UTR / Transaction ID</label>
               <input 
                 type="text" value={utr} onChange={(e) => setUtr(e.target.value)}
                 placeholder="e.g. 123456789012" 
