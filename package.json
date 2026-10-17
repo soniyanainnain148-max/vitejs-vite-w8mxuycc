@@ -16,7 +16,8 @@
   "tailwindcss": "latest",
   "recharts": "latest",
   "lucide-react": "latest",
-  "@tailwindcss/vite": "latest"
+  "@tailwindcss/vite": "latest",
+  "firebase": "latest"
 },
   "devDependencies": {
     "@types/node": "^24.19.2",
