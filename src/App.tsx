@@ -25,7 +25,9 @@ function Dashboard() {
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // 👇 QR CODE LINK 👇
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
+  
   const TOPUP_AMOUNT = 50;
   const CREDITS_TO_ADD = 5;
   const USER_ID = "user_arpit_123"; 
@@ -70,7 +72,7 @@ function Dashboard() {
     }, 2000); 
   };
 
-  // 🧠 AI GENERATION (VIA BACKEND API) 🧠
+  // 🧠 AI GENERATION (WITH ERROR CHECKING) 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -78,7 +80,7 @@ function Dashboard() {
 
     setIsGenerating(true);
     
-    // Fallback Data
+    // Default Fallback Data
     let finalData = {
       siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
       bio: "Welcome to my official gaming profile.",
@@ -88,36 +90,39 @@ function Dashboard() {
     };
 
     try {
-      // Yahan hum apne khud ke Backend ko call kar rahe hain (CORS issue khatam)
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt })
       });
 
-      if (response.ok) {
-        const aiData = await response.json();
-        
-        if (aiData.candidates && aiData.candidates[0].content.parts[0].text) {
-          let text = aiData.candidates[0].content.parts[0].text;
-          
-          // JSON parse karo
-          const parsed = JSON.parse(text);
-          
-          finalData = {
-            siteName: parsed.siteName || finalData.siteName,
-            bio: parsed.bio || finalData.bio,
-            themeType: parsed.themeType || finalData.themeType,
-            hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
-            hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
-          };
-        }
+      const responseData = await response.json();
+
+      // Agar backend se koi error aaya (jaise API key galat hai)
+      if (!response.ok) {
+        throw new Error(responseData.error || "Backend Error");
       }
-    } catch (error) {
-      console.error("AI Fail. Fallback use ho raha hai.", error);
+      
+      if (responseData.candidates && responseData.candidates[0].content.parts[0].text) {
+        let text = responseData.candidates[0].content.parts[0].text;
+        const parsed = JSON.parse(text);
+        
+        finalData = {
+          siteName: parsed.siteName || finalData.siteName,
+          bio: parsed.bio || finalData.bio,
+          themeType: parsed.themeType || finalData.themeType,
+          hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
+          hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
+        };
+      }
+
+    } catch (error: any) {
+      console.error("AI Fail:", error);
+      // Yahan hum error alert dikhayenge taaki pata chale kya problem hai
+      alert("⚠️ AI Error: " + error.message + "\n\nFallback website is being generated.");
     }
 
-    // Database mein Save
+    // Database mein Save (Hamesha chalega, chahe AI fail ho ya pass)
     try {
       const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
@@ -139,7 +144,10 @@ function Dashboard() {
       setPrompt('');
       localStorage.setItem('my_site_id', docRef.id);
       setMySiteId(docRef.id);
+      
+      // Agar AI error aaya tha, toh yeh alert batayega ki fallback se kaam ho gaya
       alert(`🚀 Website Generated Successfully!`);
+      
     } catch (dbError) {
       alert("Error saving website to database!");
     } finally {
