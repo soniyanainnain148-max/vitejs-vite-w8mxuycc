@@ -18,7 +18,8 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}` 
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile", 
+        // ✅ Yahan model update kar diya gaya hai
+        model: "llama-3.1-8b-instant", 
         messages: [
           { 
             role: "system", 
