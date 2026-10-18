@@ -25,9 +25,7 @@ function Dashboard() {
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 👇 QR CODE LINK 👇
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
-  
   const TOPUP_AMOUNT = 50;
   const CREDITS_TO_ADD = 5;
   const USER_ID = "user_arpit_123"; 
@@ -72,7 +70,7 @@ function Dashboard() {
     }, 2000); 
   };
 
-  // 🧠 AI GENERATION (WITH ERROR CHECKING) 🧠
+  // 🧠 AI GENERATION WITH STRICT 8-SECOND TIMEOUT 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -80,7 +78,6 @@ function Dashboard() {
 
     setIsGenerating(true);
     
-    // Default Fallback Data
     let finalData = {
       siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
       bio: "Welcome to my official gaming profile.",
@@ -90,15 +87,21 @@ function Dashboard() {
     };
 
     try {
+      // 🚀 YAHAN FRONTEND TIMEOUT LAGA HAI (8 Seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second baad request cancel
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({ prompt: prompt })
       });
 
+      clearTimeout(timeoutId); // Agar response jaldi aa gaya toh timer band karo
+
       const responseData = await response.json();
 
-      // Agar backend se koi error aaya (jaise API key galat hai)
       if (!response.ok) {
         throw new Error(responseData.error || "Backend Error");
       }
@@ -117,12 +120,11 @@ function Dashboard() {
       }
 
     } catch (error: any) {
-      console.error("AI Fail:", error);
-      // Yahan hum error alert dikhayenge taaki pata chale kya problem hai
-      alert("⚠️ AI Error: " + error.message + "\n\nFallback website is being generated.");
+      console.log("AI Fail ya Timeout. Fallback use ho raha hai.", error);
+      // Agar AI 8 second mein reply nahi karta, toh yahan aakar fallback chalu ho jayega
     }
 
-    // Database mein Save (Hamesha chalega, chahe AI fail ho ya pass)
+    // Database mein Save (Hamesha chalega)
     try {
       const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
@@ -145,13 +147,12 @@ function Dashboard() {
       localStorage.setItem('my_site_id', docRef.id);
       setMySiteId(docRef.id);
       
-      // Agar AI error aaya tha, toh yeh alert batayega ki fallback se kaam ho gaya
       alert(`🚀 Website Generated Successfully!`);
       
     } catch (dbError) {
       alert("Error saving website to database!");
     } finally {
-      setIsGenerating(false); 
+      setIsGenerating(false); // Spinner hamesha band hoga, chahe kuch bhi ho
     }
   };
 
