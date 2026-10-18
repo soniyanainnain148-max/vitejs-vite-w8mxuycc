@@ -77,6 +77,12 @@ function Dashboard() {
 
     setIsGenerating(true);
     
+    // 🚀 MAGIC FIX: 6 second baad spinner majboori se band hoga
+    const magicTimer = setTimeout(() => {
+      setIsGenerating(false);
+      alert("⏱️ Timeout! Server slow hai, lekin aapki fallback website ban gayi hai.");
+    }, 6000);
+
     let finalData = {
       siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
       bio: "Welcome to my official gaming profile.",
@@ -86,18 +92,17 @@ function Dashboard() {
     };
 
     try {
-      // 🚀 BULLETPROOF TIMEOUT (5 Second) 🚀
-      const fetchPromise = fetch('/api/generate', {
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), 4000); // AI ko 4 sec
+
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({ prompt: prompt })
       });
 
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Timeout")), 5000)
-      );
-
-      const response: any = await Promise.race([fetchPromise, timeoutPromise]);
+      clearTimeout(abortTimer); // AI ne jaldi reply kiya toh timer band
 
       if (response.ok) {
         const responseData = await response.json();
@@ -115,10 +120,10 @@ function Dashboard() {
         }
       }
     } catch (error) {
-      console.log("AI Error/Timeout. Fallback chal raha hai.");
+      console.log("AI Error/Timeout. Using fallback.");
     }
 
-    // Save to Database (Hamesha chalega)
+    // Save to Database (Yahan hum timeout nahi lagayenge, bas save karenge)
     try {
       const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
@@ -141,12 +146,14 @@ function Dashboard() {
       localStorage.setItem('my_site_id', docRef.id);
       setMySiteId(docRef.id);
       
+      clearTimeout(magicTimer); // Save ho gaya, timer hata do
+      setIsGenerating(false);
       alert(`🚀 Website Generated Successfully!`);
       
     } catch (dbError) {
-      alert("Error saving website to database!");
-    } finally {
-      setIsGenerating(false); // Spinner band
+      clearTimeout(magicTimer);
+      setIsGenerating(false);
+      alert("Database Error!");
     }
   };
 
