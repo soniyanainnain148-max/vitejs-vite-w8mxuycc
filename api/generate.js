@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   const { prompt } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY; // Yeh Vercel ENV se aayega
+  const apiKey = process.env.GEMINI_API_KEY; 
 
   if (!apiKey) {
     return res.status(500).json({ error: 'API Key missing in Vercel settings' });
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `Analyze this prompt: "${prompt}". Return ONLY a raw JSON object (no markdown) with exact keys: "siteName" (string), "bio" (string), "themeType" ('neon', 'hacker', or 'white'), "hasYoutube" (boolean), "hasDiscord" (boolean).` }] }],
+        contents: [{ parts: [{ text: `Analyze this prompt: "${prompt}". Return ONLY a raw JSON object with keys: "siteName", "bio", "themeType", "hasYoutube", "hasDiscord".` }] }],
         generationConfig: { responseMimeType: "application/json" }
       })
     });
