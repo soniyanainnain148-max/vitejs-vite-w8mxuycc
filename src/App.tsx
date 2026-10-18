@@ -21,15 +21,14 @@ function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [mySiteId, setMySiteId] = useState<string | null>(localStorage.getItem('my_site_id'));
 
-  // Payment States
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 👇 QR CODE LINK (Aapka FamPay QR) 👇
+  // 👇 QR CODE LINK 👇
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
   
-  // 👇 AI API KEY (Vercel ENV se aayegi) 👇
+  // 👇 AI API KEY 👇
   const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ""; 
 
   const TOPUP_AMOUNT = 50;
@@ -76,7 +75,7 @@ function Dashboard() {
     }, 2000); 
   };
 
-  // 🧠 REAL AI GENERATION WITH STRICT TIMEOUT & FALLBACK 🧠
+  // 🧠 REAL AI GENERATION (GEMINI 1.5 FLASH) 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -84,7 +83,7 @@ function Dashboard() {
 
     setIsGenerating(true);
     
-    // Default Fallback Data (Agar AI fail ho jaye)
+    // Fallback
     let finalData = {
       siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
       bio: "Welcome to my official gaming profile.",
@@ -95,53 +94,62 @@ function Dashboard() {
 
     try {
       if (GEMINI_API_KEY) {
-        // 8 Second ka Strict Timeout
+        console.log("Calling Gemini API...");
+        
+        // 10 Second Timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        // Yahan humne gemini-1.5-flash use kiya hai jo fastest hai
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
           body: JSON.stringify({
             contents: [{
               parts: [{
-                text: `Analyze this prompt: "${prompt}". Return ONLY a raw JSON object (no markdown formatting, no code blocks) with these exact keys: 
-                "siteName" (short name), "bio" (1 sentence bio), "themeType" ('neon', 'hacker', or 'white'), "hasYoutube" (boolean), "hasDiscord" (boolean).`
+                text: `Analyze this prompt: "${prompt}". Return a JSON object with keys: "siteName" (string), "bio" (string), "themeType" ('neon', 'hacker', or 'white'), "hasYoutube" (boolean), "hasDiscord" (boolean).`
               }]
-            }]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json", // YEH GOOGLE KA NAYA FEATURE HAI (Direct JSON dega)
+            }
           })
         });
 
         clearTimeout(timeoutId); 
 
-        if (response.ok) {
-          const aiData = await response.json();
+        if (!response.ok) {
+           const errData = await response.json();
+           console.error("API Error Details:", errData);
+           throw new Error("API Error");
+        }
+
+        const aiData = await response.json();
+        console.log("AI Response:", aiData);
+
+        if (aiData.candidates && aiData.candidates[0].content.parts[0].text) {
+          let text = aiData.candidates[0].content.parts[0].text;
           
-          if (aiData.candidates && aiData.candidates[0].content.parts[0].text) {
-            let text = aiData.candidates[0].content.parts[0].text;
-            
-            // JSON ko saaf karo (agar AI ne galti se markdown ```json lagaya ho)
-            const jsonMatch = text.match(/\{[\s\S]*\}/); 
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              
-              finalData = {
-                siteName: parsed.siteName || finalData.siteName,
-                bio: parsed.bio || finalData.bio,
-                themeType: parsed.themeType || finalData.themeType,
-                hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
-                hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
-              };
-            }
-          }
+          // JSON Parse karo
+          const parsed = JSON.parse(text);
+          
+          finalData = {
+            siteName: parsed.siteName || finalData.siteName,
+            bio: parsed.bio || finalData.bio,
+            themeType: parsed.themeType || finalData.themeType,
+            hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
+            hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
+          };
+          console.log("Parsed AI Data:", finalData);
         }
       }
     } catch (error) {
-      console.log("AI Fail/Timeout. Fallback chal raha hai.", error);
+      console.error("AI Fail/Timeout. Fallback chal raha hai.", error);
+      alert("AI thoda slow hai, humne automatic website bana di hai!"); // User ko inform karo
     }
 
-    // 👇 YEH PART HAMESHA CHALEGA (Chahe AI kaam kare ya fail ho) 👇
+    // Save to Database
     try {
       const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
@@ -166,9 +174,9 @@ function Dashboard() {
       alert(`🚀 Website Generated Successfully!`);
     } catch (dbError) {
       alert("Error saving website to database!");
+    } finally {
+      setIsGenerating(false); // Spinner hamesha band hoga
     }
-
-    setIsGenerating(false);
   };
 
   const copyLink = (slug: string) => {
@@ -201,11 +209,6 @@ function Dashboard() {
           <button onClick={() => setIsTopUpOpen(true)} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-2 mb-4">
             <QrCode size={16} /> Top-up ₹{TOPUP_AMOUNT}
           </button>
-          <div className="flex justify-center gap-3 mt-1">
-            <div className="w-6 h-6 bg-white rounded shadow-sm flex items-center justify-center text-[8px] font-bold text-blue-500">GPay</div>
-            <div className="w-6 h-6 bg-purple-100 rounded shadow-sm flex items-center justify-center text-[8px] font-bold text-purple-600">Pe</div>
-            <div className="w-6 h-6 bg-yellow-100 rounded shadow-sm flex items-center justify-center text-[8px] font-bold text-yellow-600">Fam</div>
-          </div>
         </div>
       </div>
 
@@ -214,7 +217,7 @@ function Dashboard() {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Build with Real AI</h1>
-            <p className="text-sm text-gray-500 mt-1">Describe your dream website. Gemini AI will build it.</p>
+            <p className="text-sm text-gray-500 mt-1">Describe your dream website. Gemini 1.5 Flash will build it.</p>
           </div>
         </div>
 
@@ -265,7 +268,7 @@ function Dashboard() {
         )}
       </div>
 
-      {/* 🟢 FAMPAY TOP-UP MODAL (SIRF QR CODE) */}
+      {/* 🟢 FAMPAY TOP-UP MODAL */}
       {isTopUpOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
