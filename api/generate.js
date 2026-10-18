@@ -18,8 +18,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}` 
       },
       body: JSON.stringify({
-        // ✅ Yahan model update kar diya gaya hai
-        model: "llama3-8b-8192", 
+        model: "openai/gpt-oss-120b", // 👈 Naya active model
         messages: [
           { 
             role: "system", 
@@ -39,7 +38,6 @@ export default async function handler(req, res) {
       return res.status(response.status).json({ error: data.error?.message || "Groq API Error" });
     }
 
-    // Groq response format
     const aiText = data.choices[0].message.content;
     res.status(200).json({ result: aiText });
     
