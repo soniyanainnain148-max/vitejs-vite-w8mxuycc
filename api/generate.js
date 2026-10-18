@@ -4,34 +4,42 @@ export default async function handler(req, res) {
   }
 
   const { prompt } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY; 
+  const apiKey = process.env.GROQ_API_KEY; 
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'Gemini API Key missing. Check Vercel ENV.' });
+    return res.status(500).json({ error: 'Groq API Key missing. Check Vercel ENV.' });
   }
 
   try {
-    // ✅ Google ka native endpoint aur latest stable model
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}` 
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `Analyze this prompt: "${prompt}". Return ONLY a raw JSON object (no markdown, no extra text) with these keys: 'siteName' (string), 'bio' (string), 'themeType' (string: 'neon', 'hacker', or 'white'), 'hasYoutube' (boolean), 'hasDiscord' (boolean).` }] }],
-        generationConfig: { 
-          responseMimeType: "application/json" // ✅ Yeh JSON output ko force karta hai
-        }
+        model: "llama-3.3-70b-versatile", 
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a website builder. Analyze the user prompt and return ONLY a raw JSON object (no markdown, no extra text) with these keys: 'siteName' (string), 'bio' (string), 'themeType' (string: 'neon', 'hacker', or 'white'), 'hasYoutube' (boolean), 'hasDiscord' (boolean)." 
+          },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7
       })
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Gemini API Error:", data);
-      return res.status(response.status).json({ error: data.error?.message || "Gemini API Error" });
+      console.error("Groq API Error:", data);
+      return res.status(response.status).json({ error: data.error?.message || "Groq API Error" });
     }
 
-    // Native response format se text nikaalna
-    const aiText = data.candidates[0].content.parts[0].text;
+    // Groq response format
+    const aiText = data.choices[0].message.content;
     res.status(200).json({ result: aiText });
     
   } catch (error) {
