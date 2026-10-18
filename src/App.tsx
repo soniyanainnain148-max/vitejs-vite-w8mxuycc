@@ -28,7 +28,7 @@ function Dashboard() {
   // 👇 QR CODE LINK 👇
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
   
-  // 👇 AI API KEY (Agar ENV nahi mila toh khali string rahega) 👇
+  // 👇 AI API KEY (Vercel ENV se aayegi) 👇
   const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ""; 
 
   const TOPUP_AMOUNT = 50;
@@ -75,7 +75,7 @@ function Dashboard() {
     }, 2000); 
   };
 
-  // 🧠 REAL AI GENERATION WITH FALLBACK 🧠
+  // 🧠 REAL AI GENERATION WITH TIMEOUT & FALLBACK 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -83,6 +83,7 @@ function Dashboard() {
 
     setIsGenerating(true);
     
+    // Fallback Data (Agar AI fail ho jaye)
     let aiResult = {
       siteName: prompt.split(' ')[0] + "'s Portfolio",
       bio: "Welcome to my official page.",
@@ -93,10 +94,14 @@ function Dashboard() {
 
     try {
       if (GEMINI_API_KEY) {
-        // Google Gemini AI Call
+        // 10 Second Timeout Setup
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             contents: [{
               parts: [{
@@ -107,19 +112,21 @@ function Dashboard() {
           })
         });
 
+        clearTimeout(timeoutId); // Response aa gaya toh timer band karo
+
         const aiData = await response.json();
         let text = aiData.candidates[0].content.parts[0].text;
         
-        // Markdown saaf karna (agar AI ne lagaya ho)
+        // Markdown format saaf karna
         text = text.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsedData = JSON.parse(text);
         
-        // AI data ko update karna
+        // AI ka data fallback data ke upar override karna
         aiResult = { ...aiResult, ...parsedData };
       }
     } catch (error) {
-      console.log("AI Error, using fallback data:", error);
-      // Error aane par purana logic (Fallback) automatically chal jayega
+      console.log("AI Error ya Timeout, Fallback use ho raha hai:", error);
+      // Error aane par system fallback data use karega
     }
 
     // Database mein save karna (AI successful ya Fallback)
@@ -146,7 +153,7 @@ function Dashboard() {
       setMySiteId(docRef.id);
       alert(`🚀 Website Generated Successfully!`);
     } catch (dbError) {
-      alert("Error saving website!");
+      alert("Error saving website to database!");
     }
 
     setIsGenerating(false);
