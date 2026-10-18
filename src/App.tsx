@@ -28,7 +28,7 @@ function Dashboard() {
   // 👇 SIRF QR CODE URL CHAHIYE, UPI ID KI ZAROORAT NAHI 👇
   const FAMPAY_QR_URL = https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg; 
   
-  const TOPUP_AMOUNT = 50;
+  const TOPUP_AMOUNT = 100;
   const CREDITS_TO_ADD = 1;
   const USER_ID = "user_arpit_123"; 
 
