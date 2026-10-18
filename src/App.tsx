@@ -25,9 +25,8 @@ function Dashboard() {
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 👇 ENV VARIABLES 👇
-  const FAMPAY_UPI_ID = import.meta.env.VITE_FAMPAY_UPI_ID || "yourdefault@fam"; 
-  const FAMPAY_QR_URL = import.meta.env.VITE_FAMPAY_QR_URL || "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=demo@fam"; // Fallback URL
+  // 👇 SIRF QR CODE URL CHAHIYE, UPI ID KI ZAROORAT NAHI 👇
+  const FAMPAY_QR_URL = import.meta.env.VITE_FAMPAY_QR_URL; 
   
   const TOPUP_AMOUNT = 50;
   const CREDITS_TO_ADD = 5;
@@ -116,11 +115,6 @@ function Dashboard() {
     navigator.clipboard.writeText(`${window.location.origin}/site/${slug}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const copyUpi = () => {
-    navigator.clipboard.writeText(FAMPAY_UPI_ID);
-    alert("FamPay UPI ID Copied!");
   };
 
   return (
@@ -213,7 +207,7 @@ function Dashboard() {
         )}
       </div>
 
-      {/* 🟢 FAMPAY TOP-UP MODAL with CUSTOM QR */}
+      {/* 🟢 FAMPAY TOP-UP MODAL (SIRF QR CODE) */}
       {isTopUpOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
@@ -223,26 +217,20 @@ function Dashboard() {
               <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Wallet className="text-purple-600" size={28} />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">Top-up via FamPay UPI</h2>
-              <p className="text-xs text-gray-500 mt-1">Pay ₹{TOPUP_AMOUNT} to get {CREDITS_TO_ADD} Credits</p>
+              <h2 className="text-xl font-bold text-gray-900">Scan & Pay</h2>
+              <p className="text-xs text-gray-500 mt-1">Pay ₹{TOPUP_AMOUNT} via any UPI App</p>
             </div>
 
-            {/* 🟢 APNA KHUD KA QR CODE YAHAN DIKHEGA */}
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col items-center mb-4">
+            {/* SIRF QR CODE DIKHEGA (Koi UPI ID NAHI) */}
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col items-center mb-6 shadow-inner">
               <img 
                 src={FAMPAY_QR_URL} 
-                alt="FamPay QR" 
-                className="w-40 h-40 rounded-lg object-contain border-2 border-purple-200 bg-white" 
+                alt="Payment QR" 
+                className="w-48 h-48 rounded-lg object-contain bg-white p-1" 
               />
-              <p className="text-[10px] text-gray-400 mt-2 font-bold uppercase">Scan with GPay / FamPay / Paytm</p>
-            </div>
-
-            <div className="flex justify-between items-center bg-gray-50 border border-gray-200 p-3 rounded-xl mb-6">
-              <div>
-                <p className="text-[9px] text-gray-500 font-bold">MY FAMPAY UPI</p>
-                <span className="text-sm font-mono font-bold text-gray-800">{FAMPAY_UPI_ID}</span>
-              </div>
-              <button onClick={copyUpi} className="text-purple-600 bg-purple-50 p-2 rounded-lg hover:bg-purple-100"><Copy size={16}/></button>
+              <p className="text-[10px] text-gray-500 mt-3 font-bold uppercase tracking-widest text-center">
+                GPay • PhonePe • Paytm • FamPay
+              </p>
             </div>
 
             <div className="mb-4">
@@ -259,7 +247,7 @@ function Dashboard() {
               className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2"
             >
               {isVerifying ? <Loader2 className="animate-spin" size={18}/> : <ShieldCheck size={18}/>}
-              {isVerifying ? 'Verifying Payment...' : 'Verify & Add Credits'}
+              {isVerifying ? 'Verifying...' : 'Verify & Add Credits'}
             </button>
           </div>
         </div>
