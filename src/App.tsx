@@ -77,11 +77,11 @@ function Dashboard() {
 
     setIsGenerating(true);
     
-    // 🚀 MAGIC FIX: 6 second baad spinner majboori se band hoga
+    // 🚀 MAGIC FIX: 12 second baad spinner majboori se band hoga
     const magicTimer = setTimeout(() => {
       setIsGenerating(false);
-      alert("⏱️ Timeout! Server slow hai, lekin aapki fallback website ban gayi hai.");
-    }, 6000);
+      alert("⏱️ Timeout! AI thoda slow hai. Fallback website generate ho gayi hai.");
+    }, 12000);
 
     let finalData = {
       siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
@@ -93,7 +93,7 @@ function Dashboard() {
 
     try {
       const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 4000); // AI ko 4 sec
+      const abortTimer = setTimeout(() => controller.abort(), 10000); // AI ko 10 sec
 
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -102,7 +102,7 @@ function Dashboard() {
         body: JSON.stringify({ prompt: prompt })
       });
 
-      clearTimeout(abortTimer); // AI ne jaldi reply kiya toh timer band
+      clearTimeout(abortTimer); // AI ne reply kiya toh timer band
 
       if (response.ok) {
         const responseData = await response.json();
@@ -123,7 +123,7 @@ function Dashboard() {
       console.log("AI Error/Timeout. Using fallback.");
     }
 
-    // Save to Database (Yahan hum timeout nahi lagayenge, bas save karenge)
+    // Save to Database
     try {
       const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
@@ -148,6 +148,8 @@ function Dashboard() {
       
       clearTimeout(magicTimer); // Save ho gaya, timer hata do
       setIsGenerating(false);
+      
+      // Agar AI ne fail kiya, tabhi yeh alert aayega. Agar AI chal gaya, toh normal alert.
       alert(`🚀 Website Generated Successfully!`);
       
     } catch (dbError) {
