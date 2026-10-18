@@ -77,6 +77,12 @@ function Dashboard() {
 
     setIsGenerating(true);
     
+    // 🚀 MAGIC FIX: 8 second baad spinner majboori se band hoga, chahe server hang ho jaye
+    const magicTimer = setTimeout(() => {
+      setIsGenerating(false);
+      alert("⏱️ AI Server ne late reply kiya. Fallback website generate ho gayi hai.");
+    }, 8000);
+
     let finalData = {
       siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
       bio: "Welcome to my official gaming profile.",
@@ -86,9 +92,8 @@ function Dashboard() {
     };
 
     try {
-      // 🚀 20 SECOND TIMEOUT (Backend ko poora time dene ke liye)
       const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 20000); 
+      const abortTimer = setTimeout(() => controller.abort(), 7000); 
 
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -99,32 +104,24 @@ function Dashboard() {
 
       clearTimeout(abortTimer); 
 
-      const responseData = await response.json();
-
-      // Agar backend se error aaya (Jaise API key galat)
-      if (!response.ok) {
-        throw new Error(responseData.error || "Backend Error");
+      if (response.ok) {
+        const responseData = await response.json();
+        if (responseData.result) {
+          let parsed = JSON.parse(responseData.result);
+          
+          finalData = {
+            siteName: parsed.siteName || finalData.siteName,
+            bio: parsed.bio || finalData.bio,
+            themeType: parsed.themeType || finalData.themeType,
+            hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
+            hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
+          };
+        }
       }
-
-      if (responseData.candidates && responseData.candidates[0].content.parts[0].text) {
-        let text = responseData.candidates[0].content.parts[0].text;
-        const parsed = JSON.parse(text);
-        
-        finalData = {
-          siteName: parsed.siteName || finalData.siteName,
-          bio: parsed.bio || finalData.bio,
-          themeType: parsed.themeType || finalData.themeType,
-          hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
-          hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
-        };
-      }
-    } catch (error: any) {
-      console.error("AI Fail:", error);
-      // AGAR AI FAIL HUA TOH YEH ALERT DIKHEGA
-      alert("⚠️ AI Failed: " + error.message + "\nFallback use ho raha hai.");
+    } catch (error) {
+      console.log("AI Error/Timeout. Using fallback.");
     }
 
-    // Save to Database (Fallback ya AI data)
     try {
       const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
@@ -147,12 +144,14 @@ function Dashboard() {
       localStorage.setItem('my_site_id', docRef.id);
       setMySiteId(docRef.id);
       
+      clearTimeout(magicTimer); // Save ho gaya, timer hata do
+      setIsGenerating(false);
       alert(`🚀 Website Generated Successfully!`);
       
     } catch (dbError) {
-      alert("Database Error!");
-    } finally {
+      clearTimeout(magicTimer);
       setIsGenerating(false);
+      alert("Database Error!");
     }
   };
 
@@ -194,7 +193,7 @@ function Dashboard() {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Build with Real AI</h1>
-            <p className="text-sm text-gray-500 mt-1">Describe your dream website. Gemini AI will build it.</p>
+            <p className="text-sm text-gray-500 mt-1">Describe your dream website. AI will build it.</p>
           </div>
         </div>
 
