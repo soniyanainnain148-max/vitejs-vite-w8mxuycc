@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY; 
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'API Key missing in Vercel settings' });
+    return res.status(500).json({ error: 'API Key missing. Check Vercel Environment Variables.' });
   }
 
   try {
@@ -21,8 +21,17 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+
+    // Agar Google API koi error deta hai (jaise galat key)
+    if (!response.ok) {
+      console.error("Google API Error:", data);
+      return res.status(response.status).json({ error: data.error?.message || "Google API Error" });
+    }
+
     res.status(200).json(data);
+    
   } catch (error) {
-    res.status(500).json({ error: 'AI generation failed' });
+    console.error("Server Error:", error);
+    res.status(500).json({ error: error.message || 'AI generation failed' });
   }
 }
