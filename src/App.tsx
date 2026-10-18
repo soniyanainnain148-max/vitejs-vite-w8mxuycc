@@ -70,7 +70,6 @@ function Dashboard() {
     }, 2000); 
   };
 
-  // 🧠 AI GENERATION WITH STRICT 8-SECOND TIMEOUT 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -87,44 +86,39 @@ function Dashboard() {
     };
 
     try {
-      // 🚀 YAHAN FRONTEND TIMEOUT LAGA HAI (8 Seconds)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second baad request cancel
-
-      const response = await fetch('/api/generate', {
+      // 🚀 BULLETPROOF TIMEOUT (5 Second) 🚀
+      const fetchPromise = fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
         body: JSON.stringify({ prompt: prompt })
       });
 
-      clearTimeout(timeoutId); // Agar response jaldi aa gaya toh timer band karo
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 5000)
+      );
 
-      const responseData = await response.json();
+      const response: any = await Promise.race([fetchPromise, timeoutPromise]);
 
-      if (!response.ok) {
-        throw new Error(responseData.error || "Backend Error");
+      if (response.ok) {
+        const responseData = await response.json();
+        if (responseData.candidates && responseData.candidates[0].content.parts[0].text) {
+          let text = responseData.candidates[0].content.parts[0].text;
+          const parsed = JSON.parse(text);
+          
+          finalData = {
+            siteName: parsed.siteName || finalData.siteName,
+            bio: parsed.bio || finalData.bio,
+            themeType: parsed.themeType || finalData.themeType,
+            hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
+            hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
+          };
+        }
       }
-      
-      if (responseData.candidates && responseData.candidates[0].content.parts[0].text) {
-        let text = responseData.candidates[0].content.parts[0].text;
-        const parsed = JSON.parse(text);
-        
-        finalData = {
-          siteName: parsed.siteName || finalData.siteName,
-          bio: parsed.bio || finalData.bio,
-          themeType: parsed.themeType || finalData.themeType,
-          hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
-          hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
-        };
-      }
-
-    } catch (error: any) {
-      console.log("AI Fail ya Timeout. Fallback use ho raha hai.", error);
-      // Agar AI 8 second mein reply nahi karta, toh yahan aakar fallback chalu ho jayega
+    } catch (error) {
+      console.log("AI Error/Timeout. Fallback chal raha hai.");
     }
 
-    // Database mein Save (Hamesha chalega)
+    // Save to Database (Hamesha chalega)
     try {
       const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
@@ -152,7 +146,7 @@ function Dashboard() {
     } catch (dbError) {
       alert("Error saving website to database!");
     } finally {
-      setIsGenerating(false); // Spinner hamesha band hoga, chahe kuch bhi ho
+      setIsGenerating(false); // Spinner band
     }
   };
 
