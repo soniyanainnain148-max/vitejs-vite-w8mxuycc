@@ -21,11 +21,12 @@ function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [mySiteId, setMySiteId] = useState<string | null>(localStorage.getItem('my_site_id'));
 
+  // Payment States
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 👇 QR CODE LINK 👇
+  // 👇 QR CODE LINK (Aapka FamPay QR) 👇
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
   
   // 👇 AI API KEY (Vercel ENV se aayegi) 👇
@@ -75,7 +76,7 @@ function Dashboard() {
     }, 2000); 
   };
 
-  // 🧠 REAL AI GENERATION WITH TIMEOUT & FALLBACK 🧠
+  // 🧠 REAL AI GENERATION WITH STRICT TIMEOUT & FALLBACK 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -83,20 +84,20 @@ function Dashboard() {
 
     setIsGenerating(true);
     
-    // Fallback Data (Agar AI fail ho jaye)
-    let aiResult = {
-      siteName: prompt.split(' ')[0] + "'s Portfolio",
-      bio: "Welcome to my official page.",
-      themeType: "white",
+    // Default Fallback Data (Agar AI fail ho jaye)
+    let finalData = {
+      siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
+      bio: "Welcome to my official gaming profile.",
+      themeType: "white", 
       hasYoutube: prompt.toLowerCase().includes('youtube'),
       hasDiscord: prompt.toLowerCase().includes('discord')
     };
 
     try {
       if (GEMINI_API_KEY) {
-        // 10 Second Timeout Setup
+        // 8 Second ka Strict Timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
@@ -112,35 +113,46 @@ function Dashboard() {
           })
         });
 
-        clearTimeout(timeoutId); // Response aa gaya toh timer band karo
+        clearTimeout(timeoutId); 
 
-        const aiData = await response.json();
-        let text = aiData.candidates[0].content.parts[0].text;
-        
-        // Markdown format saaf karna
-        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedData = JSON.parse(text);
-        
-        // AI ka data fallback data ke upar override karna
-        aiResult = { ...aiResult, ...parsedData };
+        if (response.ok) {
+          const aiData = await response.json();
+          
+          if (aiData.candidates && aiData.candidates[0].content.parts[0].text) {
+            let text = aiData.candidates[0].content.parts[0].text;
+            
+            // JSON ko saaf karo (agar AI ne galti se markdown ```json lagaya ho)
+            const jsonMatch = text.match(/\{[\s\S]*\}/); 
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              
+              finalData = {
+                siteName: parsed.siteName || finalData.siteName,
+                bio: parsed.bio || finalData.bio,
+                themeType: parsed.themeType || finalData.themeType,
+                hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
+                hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
+              };
+            }
+          }
+        }
       }
     } catch (error) {
-      console.log("AI Error ya Timeout, Fallback use ho raha hai:", error);
-      // Error aane par system fallback data use karega
+      console.log("AI Fail/Timeout. Fallback chal raha hai.", error);
     }
 
-    // Database mein save karna (AI successful ya Fallback)
+    // 👇 YEH PART HAMESHA CHALEGA (Chahe AI kaam kare ya fail ho) 👇
     try {
-      const generatedSlug = aiResult.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+      const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
       const docRef = await addDoc(collection(db, "ai_sites"), {
-        siteName: aiResult.siteName, 
+        siteName: finalData.siteName, 
         slug: generatedSlug, 
         prompt: prompt, 
-        bio: aiResult.bio,
-        themeType: aiResult.themeType, 
-        hasYoutube: aiResult.hasYoutube, 
-        hasDiscord: aiResult.hasDiscord, 
+        bio: finalData.bio,
+        themeType: finalData.themeType, 
+        hasYoutube: finalData.hasYoutube, 
+        hasDiscord: finalData.hasDiscord, 
         createdAt: new Date()
       });
       
