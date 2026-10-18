@@ -25,12 +25,7 @@ function Dashboard() {
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 👇 QR CODE LINK 👇
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
-  
-  // 👇 AI API KEY 👇
-  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ""; 
-
   const TOPUP_AMOUNT = 50;
   const CREDITS_TO_ADD = 5;
   const USER_ID = "user_arpit_123"; 
@@ -75,7 +70,7 @@ function Dashboard() {
     }, 2000); 
   };
 
-  // 🧠 REAL AI GENERATION (GEMINI 1.5 FLASH) 🧠
+  // 🧠 AI GENERATION (VIA BACKEND API) 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -83,7 +78,7 @@ function Dashboard() {
 
     setIsGenerating(true);
     
-    // Fallback
+    // Fallback Data
     let finalData = {
       siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
       bio: "Welcome to my official gaming profile.",
@@ -93,45 +88,20 @@ function Dashboard() {
     };
 
     try {
-      if (GEMINI_API_KEY) {
-        console.log("Calling Gemini API...");
-        
-        // 10 Second Timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+      // Yahan hum apne khud ke Backend ko call kar rahe hain (CORS issue khatam)
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt })
+      });
 
-        // Yahan humne gemini-1.5-flash use kiya hai jo fastest hai
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `Analyze this prompt: "${prompt}". Return a JSON object with keys: "siteName" (string), "bio" (string), "themeType" ('neon', 'hacker', or 'white'), "hasYoutube" (boolean), "hasDiscord" (boolean).`
-              }]
-            }],
-            generationConfig: {
-              responseMimeType: "application/json", // YEH GOOGLE KA NAYA FEATURE HAI (Direct JSON dega)
-            }
-          })
-        });
-
-        clearTimeout(timeoutId); 
-
-        if (!response.ok) {
-           const errData = await response.json();
-           console.error("API Error Details:", errData);
-           throw new Error("API Error");
-        }
-
+      if (response.ok) {
         const aiData = await response.json();
-        console.log("AI Response:", aiData);
-
+        
         if (aiData.candidates && aiData.candidates[0].content.parts[0].text) {
           let text = aiData.candidates[0].content.parts[0].text;
           
-          // JSON Parse karo
+          // JSON parse karo
           const parsed = JSON.parse(text);
           
           finalData = {
@@ -141,15 +111,13 @@ function Dashboard() {
             hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
             hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
           };
-          console.log("Parsed AI Data:", finalData);
         }
       }
     } catch (error) {
-      console.error("AI Fail/Timeout. Fallback chal raha hai.", error);
-      alert("AI thoda slow hai, humne automatic website bana di hai!"); // User ko inform karo
+      console.error("AI Fail. Fallback use ho raha hai.", error);
     }
 
-    // Save to Database
+    // Database mein Save
     try {
       const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
@@ -175,7 +143,7 @@ function Dashboard() {
     } catch (dbError) {
       alert("Error saving website to database!");
     } finally {
-      setIsGenerating(false); // Spinner hamesha band hoga
+      setIsGenerating(false); 
     }
   };
 
@@ -217,7 +185,7 @@ function Dashboard() {
         <div className="flex justify-between items-center mb-10">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Build with Real AI</h1>
-            <p className="text-sm text-gray-500 mt-1">Describe your dream website. Gemini 1.5 Flash will build it.</p>
+            <p className="text-sm text-gray-500 mt-1">Describe your dream website. Gemini AI will build it.</p>
           </div>
         </div>
 
