@@ -19,7 +19,9 @@ function Dashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [copied, setCopied] = useState(false);
-  const [mySiteId, setMySiteId] = useState<string | null>(localStorage.getItem('my_site_id'));
+  
+  // Ab ID ki jagah Slug use kar rahe hain (URL ke liye)
+  const [mySiteSlug, setMySiteSlug] = useState<string | null>(localStorage.getItem('my_site_slug'));
 
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [utr, setUtr] = useState('');
@@ -70,7 +72,7 @@ function Dashboard() {
     }, 1000); 
   };
 
-  // 🧠 BINA AI WALA SUPER FAST LOGIC 🧠
+  // 🧠 BINA AI WALA SUPER FAST LOGIC (Ab Database par nahi atkega) 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -100,35 +102,49 @@ function Dashboard() {
 
       const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-      // 🔥 Firebase mein save karna (Yahan error aa sakta hai)
-      const docRef = await addDoc(collection(db, "ai_sites"), {
-        siteName: siteName, 
-        slug: generatedSlug, 
-        prompt: prompt, 
-        bio: bio,
-        themeType: themeType, 
-        hasYoutube: hasYoutube, 
-        hasDiscord: hasDiscord, 
-        createdAt: new Date()
-      });
-      
-      // 🔥 Credits minus karna
-      const userRef = doc(db, "users", USER_ID);
-      await updateDoc(userRef, { credits: credits - 1 });
-      
-      setCredits(prev => prev - 1);
-      setPrompt('');
-      localStorage.setItem('my_site_id', docRef.id);
-      setMySiteId(docRef.id);
-      
-      alert(`🚀 Website Generated Successfully!`);
+      // 1. Fake Delay for UI (1.5 second)
+      setTimeout(async () => {
+        
+        // Naya Site Object banaya
+        const newSite = {
+          id: 'local_' + Date.now(),
+          siteName: siteName, 
+          slug: generatedSlug, 
+          prompt: prompt, 
+          bio: bio,
+          themeType: themeType, 
+          hasYoutube: hasYoutube, 
+          hasDiscord: hasDiscord, 
+          createdAt: new Date()
+        };
+
+        // 2. Direct UI par dikhaya aur Credits minus kiye
+        setSites(prev => [...prev, newSite]);
+        setCredits(prev => prev - 1);
+        setPrompt('');
+        localStorage.setItem('my_site_slug', generatedSlug);
+        setMySiteSlug(generatedSlug);
+        
+        setIsGenerating(false); // Building spinner band
+        alert(`🚀 Website Generated Successfully!`);
+
+        // 3. Background mein Firebase save karna (Agar fail bhi ho toh website dikhegi)
+        try {
+          await addDoc(collection(db, "ai_sites"), {
+            siteName, slug: generatedSlug, prompt, bio, themeType, hasYoutube, hasDiscord, createdAt: new Date()
+          });
+          const userRef = doc(db, "users", USER_ID);
+          await updateDoc(userRef, { credits: credits - 1 });
+        } catch (dbError) {
+          console.log("Firebase Background Save Failed:", dbError);
+        }
+
+      }, 1500); 
       
     } catch (error: any) {
-      // 🚨 AGAR FIREBASE MEIN ERROR AAYEGA TOH YAHAN DIKHEGA
       console.error(error);
-      alert("⚠️ Database Error: " + error.message);
-    } finally {
-      setIsGenerating(false); // Building spinner hamesha band hoga
+      setIsGenerating(false);
+      alert("Error: " + error.message);
     }
   };
 
@@ -197,28 +213,27 @@ function Dashboard() {
           </div>
         </div>
 
-        {mySiteId && !isGenerating && (
-          <div>
+        {/* Website Show Hone Wala Section */}
+        {mySiteSlug && !isGenerating && sites.filter(s => s.slug === mySiteSlug).map(site => (
+          <div key={site.id}>
             <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2"><Globe size={16} className="text-purple-600"/> YOUR LIVE WEBSITE</h3>
-            {sites.filter(s => s.id === mySiteId).map(site => (
-              <div key={site.id} className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
-                <div>
-                  <h4 className="text-gray-900 font-bold text-lg">{site.siteName}</h4>
-                  <p className="text-xs text-purple-600 font-mono mt-1">/site/{site.slug}</p>
-                  <p className="text-[10px] text-gray-400 mt-1 line-clamp-1">{site.bio}</p>
-                </div>
-                <div className="flex gap-2 w-full md:w-auto">
-                  <button onClick={() => copyLink(site.slug)} className="flex-1 md:flex-none bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition">
-                    {copied ? <Check size={14} className="text-green-500"/> : <Copy size={14} />} Copy Link
-                  </button>
-                  <a href={`/site/${site.slug}`} target="_blank" rel="noreferrer" className="flex-1 md:flex-none bg-purple-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition shadow-md">
-                    <ExternalLink size={14} /> Visit
-                  </a>
-                </div>
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+              <div>
+                <h4 className="text-gray-900 font-bold text-lg">{site.siteName}</h4>
+                <p className="text-xs text-purple-600 font-mono mt-1">/site/{site.slug}</p>
+                <p className="text-[10px] text-gray-400 mt-1 line-clamp-1">{site.bio}</p>
               </div>
-            ))}
+              <div className="flex gap-2 w-full md:w-auto">
+                <button onClick={() => copyLink(site.slug)} className="flex-1 md:flex-none bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition">
+                  {copied ? <Check size={14} className="text-green-500"/> : <Copy size={14} />} Copy Link
+                </button>
+                <a href={`/site/${site.slug}`} target="_blank" rel="noreferrer" className="flex-1 md:flex-none bg-purple-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition shadow-md">
+                  <ExternalLink size={14} /> Visit
+                </a>
+              </div>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
       {/* 🟢 FAMPAY TOP-UP MODAL */}
