@@ -67,9 +67,10 @@ function Dashboard() {
         alert("Verification Failed!");
       }
       setIsVerifying(false);
-    }, 2000); 
+    }, 1000); 
   };
 
+  // 🧠 BINA AI WALA SUPER FAST LOGIC (Local Smart Engine) 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -77,82 +78,68 @@ function Dashboard() {
 
     setIsGenerating(true);
     
-    // 🚀 MAGIC FIX: 8 second baad spinner majboori se band hoga, chahe server hang ho jaye
-    const magicTimer = setTimeout(() => {
-      setIsGenerating(false);
-      alert("⏱️ AI Server ne late reply kiya. Fallback website generate ho gayi hai.");
-    }, 8000);
-
-    let finalData = {
-      siteName: prompt.split(' ').slice(0, 2).join(' ') + "'s Portfolio", 
-      bio: "Welcome to my official gaming profile.",
-      themeType: "white", 
-      hasYoutube: prompt.toLowerCase().includes('youtube'),
-      hasDiscord: prompt.toLowerCase().includes('discord')
-    };
-
-    try {
-      const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 7000); 
-
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({ prompt: prompt })
-      });
-
-      clearTimeout(abortTimer); 
-
-      if (response.ok) {
-        const responseData = await response.json();
-        if (responseData.result) {
-          let parsed = JSON.parse(responseData.result);
-          
-          finalData = {
-            siteName: parsed.siteName || finalData.siteName,
-            bio: parsed.bio || finalData.bio,
-            themeType: parsed.themeType || finalData.themeType,
-            hasYoutube: parsed.hasYoutube !== undefined ? parsed.hasYoutube : finalData.hasYoutube,
-            hasDiscord: parsed.hasDiscord !== undefined ? parsed.hasDiscord : finalData.hasDiscord,
-          };
+    // 0.5 second ka chhota sa delay taaki user ko lage kuch process hua hai (UI experience ke liye)
+    setTimeout(async () => {
+      try {
+        const lowerPrompt = prompt.toLowerCase();
+        
+        // 1. NAAM NIKAALNA
+        let siteName = prompt.split(' ')[0] + "'s Portfolio";
+        if (lowerPrompt.includes('naam ') || lowerPrompt.includes('named ')) {
+          // "naam Arpit hai" ya "named Arpit" mein se Arpit nikaalna
+          const namePart = prompt.split(/naam |named /i)[1];
+          if (namePart) {
+            siteName = namePart.split(' ')[0];
+          }
         }
+
+        // 2. BIO BANANA (Keyword ke hisaab se)
+        let bio = "Welcome to my official page.";
+        if (lowerPrompt.includes('gamer') || lowerPrompt.includes('pro')) bio = "Pro Gamer & Content Creator.";
+        if (lowerPrompt.includes('coder') || lowerPrompt.includes('developer')) bio = "Software Developer & Tech Enthusiast.";
+        if (lowerPrompt.includes('student')) bio = "Student | Dreamer | Learner.";
+
+        // 3. THEME SELECT KARNA
+        let themeType = 'white';
+        if (lowerPrompt.includes('neon') || lowerPrompt.includes('pink') || lowerPrompt.includes('cyber')) themeType = 'neon';
+        if (lowerPrompt.includes('hacker') || lowerPrompt.includes('dark') || lowerPrompt.includes('green')) themeType = 'hacker';
+
+        // 4. LINKS CHECK KARNA
+        const hasYoutube = lowerPrompt.includes('youtube') || lowerPrompt.includes('video');
+        const hasDiscord = lowerPrompt.includes('discord') || lowerPrompt.includes('community');
+
+        // 5. URL SLUG BANANA
+        const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+
+        // 6. FIREBASE MEIN SAVE KARNA
+        const docRef = await addDoc(collection(db, "ai_sites"), {
+          siteName: siteName, 
+          slug: generatedSlug, 
+          prompt: prompt, 
+          bio: bio,
+          themeType: themeType, 
+          hasYoutube: hasYoutube, 
+          hasDiscord: hasDiscord, 
+          createdAt: new Date()
+        });
+        
+        // 7. CREDIT MINUS KARNA
+        const userRef = doc(db, "users", USER_ID);
+        await updateDoc(userRef, { credits: credits - 1 });
+        
+        setCredits(prev => prev - 1);
+        setPrompt('');
+        localStorage.setItem('my_site_id', docRef.id);
+        setMySiteId(docRef.id);
+        
+        setIsGenerating(false);
+        alert(`🚀 Website Generated Successfully!`);
+        
+      } catch (dbError) {
+        setIsGenerating(false);
+        alert("Database Error: Could not save website.");
       }
-    } catch (error) {
-      console.log("AI Error/Timeout. Using fallback.");
-    }
-
-    try {
-      const generatedSlug = finalData.siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
-
-      const docRef = await addDoc(collection(db, "ai_sites"), {
-        siteName: finalData.siteName, 
-        slug: generatedSlug, 
-        prompt: prompt, 
-        bio: finalData.bio,
-        themeType: finalData.themeType, 
-        hasYoutube: finalData.hasYoutube, 
-        hasDiscord: finalData.hasDiscord, 
-        createdAt: new Date()
-      });
-      
-      const userRef = doc(db, "users", USER_ID);
-      await updateDoc(userRef, { credits: credits - 1 });
-      
-      setCredits(prev => prev - 1);
-      setPrompt('');
-      localStorage.setItem('my_site_id', docRef.id);
-      setMySiteId(docRef.id);
-      
-      clearTimeout(magicTimer); // Save ho gaya, timer hata do
-      setIsGenerating(false);
-      alert(`🚀 Website Generated Successfully!`);
-      
-    } catch (dbError) {
-      clearTimeout(magicTimer);
-      setIsGenerating(false);
-      alert("Database Error!");
-    }
+    }, 500); // 500ms delay for smooth UI
   };
 
   const copyLink = (slug: string) => {
@@ -172,7 +159,7 @@ function Dashboard() {
             <span className="font-extrabold text-lg text-gray-900">AI WEBCRAFT</span>
           </div>
           <div className="flex flex-col gap-2">
-            <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold bg-purple-50 text-purple-600 border border-purple-100"><BrainCircuit size={18} /> Gemini AI Generator</button>
+            <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold bg-purple-50 text-purple-600 border border-purple-100"><BrainCircuit size={18} /> Smart Generator</button>
             <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition"><Globe size={18} /> My Websites</button>
           </div>
         </div>
@@ -192,8 +179,8 @@ function Dashboard() {
       <div className="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full">
         <div className="flex justify-between items-center mb-10">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Build with Real AI</h1>
-            <p className="text-sm text-gray-500 mt-1">Describe your dream website. AI will build it.</p>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Build your Website</h1>
+            <p className="text-sm text-gray-500 mt-1">Describe your idea. Our Smart Engine will build it instantly.</p>
           </div>
         </div>
 
@@ -213,7 +200,7 @@ function Dashboard() {
                 <span className="text-xs font-bold text-gray-500 flex items-center gap-1"><Zap size={14} className="text-yellow-500"/> 1 Credit required</span>
                 <button type="submit" disabled={isGenerating || credits < 1} className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition shadow-md disabled:opacity-50">
                   {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                  {isGenerating ? 'AI is Thinking...' : 'Generate Website'}
+                  {isGenerating ? 'Building...' : 'Generate Website'}
                 </button>
               </div>
             </form>
