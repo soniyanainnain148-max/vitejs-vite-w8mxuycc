@@ -10,10 +10,10 @@ import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteD
 
 function App() {
   const currentPath = window.location.pathname;
-  // 🚀 FIX: URL se ?v= jaisa kuch bhi hata kar sirf slug nikaalna
-  const cleanPath = currentPath.split('?')[0]; 
+  // 🚀 Clean URL (Hatao ?v= aur trailing slash)
+  const cleanPath = currentPath.split('?')[0].replace(/\/$/, ''); 
   const isPublicSite = cleanPath.startsWith('/site/');
-  const siteSlug = isPublicSite ? cleanPath.split('/site/')[1].replace(/\/$/, '') : '';
+  const siteSlug = isPublicSite ? cleanPath.split('/site/')[1] : '';
 
   if (isPublicSite) return <PublicSite slug={siteSlug} />;
   return <Dashboard />;
@@ -92,55 +92,49 @@ function Dashboard() {
     }, 1000); 
   };
 
-  const handleGenerate = () => {
+  // 🚀 FIXED: Data save hone tak wait karega, fir link dega
+  const handleGenerate = async () => {
     if (!siteName) return alert("Please enter your business name.");
-    if (credits < 1) return alert("Insufficient credits! Please top-up.");
+    if (credits < 1) return alert("Insufficient credits!");
 
     setIsGenerating(true);
     
-    setTimeout(async () => {
-      try {
-        const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+    try {
+      const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-        // Default values taaki undefined error na aaye
-        const newSite = {
-          siteName: siteName || "My Website", 
-          slug: generatedSlug, 
-          bio: bio || "Welcome to my page.", 
-          themeType: theme || "white", 
-          button1Title: selectedCategory?.btn1 || "Explore", 
-          button1Url: link1 || "#",
-          button2Title: selectedCategory?.btn2 || "Contact", 
-          button2Url: link2 || "#",
-          categoryName: selectedCategory?.name || "Business",
-          products: [], 
-          createdAt: new Date()
-        };
+      const newSite = {
+        siteName: siteName || "My Website", 
+        slug: generatedSlug, 
+        bio: bio || "Welcome to my page.", 
+        themeType: theme || "white", 
+        button1Title: selectedCategory?.btn1 || "Explore", 
+        button1Url: link1 || "#",
+        button2Title: selectedCategory?.btn2 || "Contact", 
+        button2Url: link2 || "#",
+        categoryName: selectedCategory?.name || "Business",
+        products: [], 
+        createdAt: new Date()
+      };
 
-        // UI Turant Update Karo
-        setSites(prev => [...prev, { id: 'local_' + Date.now(), ...newSite }]);
-        setCredits(prev => prev - 1);
-        localStorage.setItem('my_site_slug', generatedSlug); 
-        setMySiteSlug(generatedSlug);
-        
-        setIsGenerating(false); 
-        setStep('select'); 
-        setSiteName(''); setLink1(''); setLink2('');
-        alert(`🚀 Website Generated Successfully!`);
+      // WAIT for Firebase to save!
+      const docRef = await addDoc(collection(db, "ai_sites"), newSite);
+      await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
 
-        // Background mein Firebase Save karo
-        try {
-          await addDoc(collection(db, "ai_sites"), newSite);
-          await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
-        } catch (dbErr) {
-          console.log("Firebase Save Failed:", dbErr);
-        }
-
-      } catch (error: any) {
-        setIsGenerating(false); 
-        alert("Error: " + error.message);
-      }
-    }, 1200); 
+      setSites(prev => [...prev, { id: docRef.id, ...newSite }]);
+      setCredits(prev => prev - 1);
+      
+      localStorage.setItem('my_site_slug', generatedSlug); 
+      setMySiteSlug(generatedSlug);
+      
+      setIsGenerating(false); 
+      setStep('select'); 
+      setSiteName(''); setLink1(''); setLink2('');
+      alert(`🚀 Website Generated Successfully!`);
+      
+    } catch (error: any) {
+      setIsGenerating(false); 
+      alert("Error: " + error.message);
+    }
   };
 
   const saveNote = async () => {
@@ -252,7 +246,6 @@ function Dashboard() {
           </>
         )}
 
-        {/* NOTES & CUSTOMERS */}
         {activeTab === 'notes' && (
           <div className="animate-fade-in">
              <h1 className="text-3xl font-extrabold text-gray-900 mb-6">My Notes</h1>
