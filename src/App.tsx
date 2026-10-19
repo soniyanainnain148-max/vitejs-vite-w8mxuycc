@@ -70,7 +70,7 @@ function Dashboard() {
     }, 1000); 
   };
 
-  // 🧠 BINA AI WALA SUPER FAST LOGIC (Local Smart Engine) 🧠
+  // 🧠 BINA AI WALA SUPER FAST LOGIC 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -78,68 +78,58 @@ function Dashboard() {
 
     setIsGenerating(true);
     
-    // 0.5 second ka chhota sa delay taaki user ko lage kuch process hua hai (UI experience ke liye)
-    setTimeout(async () => {
-      try {
-        const lowerPrompt = prompt.toLowerCase();
-        
-        // 1. NAAM NIKAALNA
-        let siteName = prompt.split(' ')[0] + "'s Portfolio";
-        if (lowerPrompt.includes('naam ') || lowerPrompt.includes('named ')) {
-          // "naam Arpit hai" ya "named Arpit" mein se Arpit nikaalna
-          const namePart = prompt.split(/naam |named /i)[1];
-          if (namePart) {
-            siteName = namePart.split(' ')[0];
-          }
-        }
-
-        // 2. BIO BANANA (Keyword ke hisaab se)
-        let bio = "Welcome to my official page.";
-        if (lowerPrompt.includes('gamer') || lowerPrompt.includes('pro')) bio = "Pro Gamer & Content Creator.";
-        if (lowerPrompt.includes('coder') || lowerPrompt.includes('developer')) bio = "Software Developer & Tech Enthusiast.";
-        if (lowerPrompt.includes('student')) bio = "Student | Dreamer | Learner.";
-
-        // 3. THEME SELECT KARNA
-        let themeType = 'white';
-        if (lowerPrompt.includes('neon') || lowerPrompt.includes('pink') || lowerPrompt.includes('cyber')) themeType = 'neon';
-        if (lowerPrompt.includes('hacker') || lowerPrompt.includes('dark') || lowerPrompt.includes('green')) themeType = 'hacker';
-
-        // 4. LINKS CHECK KARNA
-        const hasYoutube = lowerPrompt.includes('youtube') || lowerPrompt.includes('video');
-        const hasDiscord = lowerPrompt.includes('discord') || lowerPrompt.includes('community');
-
-        // 5. URL SLUG BANANA
-        const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
-
-        // 6. FIREBASE MEIN SAVE KARNA
-        const docRef = await addDoc(collection(db, "ai_sites"), {
-          siteName: siteName, 
-          slug: generatedSlug, 
-          prompt: prompt, 
-          bio: bio,
-          themeType: themeType, 
-          hasYoutube: hasYoutube, 
-          hasDiscord: hasDiscord, 
-          createdAt: new Date()
-        });
-        
-        // 7. CREDIT MINUS KARNA
-        const userRef = doc(db, "users", USER_ID);
-        await updateDoc(userRef, { credits: credits - 1 });
-        
-        setCredits(prev => prev - 1);
-        setPrompt('');
-        localStorage.setItem('my_site_id', docRef.id);
-        setMySiteId(docRef.id);
-        
-        setIsGenerating(false);
-        alert(`🚀 Website Generated Successfully!`);
-        
-      } catch (dbError) {
-        setIsGenerating(false);
-        alert("Database Error: Could not save website.");
+    try {
+      const lowerPrompt = prompt.toLowerCase();
+      
+      let siteName = prompt.split(' ')[0] + "'s Portfolio";
+      if (lowerPrompt.includes('naam ') || lowerPrompt.includes('named ')) {
+        const namePart = prompt.split(/naam |named /i)[1];
+        if (namePart) siteName = namePart.split(' ')[0];
       }
-    }, 500); // 500ms delay for smooth UI
+
+      let bio = "Welcome to my official page.";
+      if (lowerPrompt.includes('gamer') || lowerPrompt.includes('pro')) bio = "Pro Gamer & Content Creator.";
+      if (lowerPrompt.includes('coder') || lowerPrompt.includes('developer')) bio = "Software Developer & Tech Enthusiast.";
+
+      let themeType = 'white';
+      if (lowerPrompt.includes('neon') || lowerPrompt.includes('pink') || lowerPrompt.includes('cyber')) themeType = 'neon';
+      if (lowerPrompt.includes('hacker') || lowerPrompt.includes('dark') || lowerPrompt.includes('green')) themeType = 'hacker';
+
+      const hasYoutube = lowerPrompt.includes('youtube') || lowerPrompt.includes('video');
+      const hasDiscord = lowerPrompt.includes('discord') || lowerPrompt.includes('community');
+
+      const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+
+      // 🔥 Firebase mein save karna (Yahan error aa sakta hai)
+      const docRef = await addDoc(collection(db, "ai_sites"), {
+        siteName: siteName, 
+        slug: generatedSlug, 
+        prompt: prompt, 
+        bio: bio,
+        themeType: themeType, 
+        hasYoutube: hasYoutube, 
+        hasDiscord: hasDiscord, 
+        createdAt: new Date()
+      });
+      
+      // 🔥 Credits minus karna
+      const userRef = doc(db, "users", USER_ID);
+      await updateDoc(userRef, { credits: credits - 1 });
+      
+      setCredits(prev => prev - 1);
+      setPrompt('');
+      localStorage.setItem('my_site_id', docRef.id);
+      setMySiteId(docRef.id);
+      
+      alert(`🚀 Website Generated Successfully!`);
+      
+    } catch (error: any) {
+      // 🚨 AGAR FIREBASE MEIN ERROR AAYEGA TOH YAHAN DIKHEGA
+      console.error(error);
+      alert("⚠️ Database Error: " + error.message);
+    } finally {
+      setIsGenerating(false); // Building spinner hamesha band hoga
+    }
   };
 
   const copyLink = (slug: string) => {
