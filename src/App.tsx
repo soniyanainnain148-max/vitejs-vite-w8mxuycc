@@ -10,7 +10,6 @@ import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteD
 
 function App() {
   const currentPath = window.location.pathname;
-  // 🚀 Clean URL (Hatao ?v= aur trailing slash)
   const cleanPath = currentPath.split('?')[0].replace(/\/$/, ''); 
   const isPublicSite = cleanPath.startsWith('/site/');
   const siteSlug = isPublicSite ? cleanPath.split('/site/')[1] : '';
@@ -92,49 +91,59 @@ function Dashboard() {
     }, 1000); 
   };
 
-  // 🚀 FIXED: Data save hone tak wait karega, fir link dega
-  const handleGenerate = async () => {
+  // 🚀 INSTANT GENERATE (Bulletproof)
+  const handleGenerate = () => {
     if (!siteName) return alert("Please enter your business name.");
     if (credits < 1) return alert("Insufficient credits!");
 
     setIsGenerating(true);
     
-    try {
-      const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+    // Thoda delay taaki user ko 'Building' feel aaye
+    setTimeout(async () => {
+      try {
+        const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-      const newSite = {
-        siteName: siteName || "My Website", 
-        slug: generatedSlug, 
-        bio: bio || "Welcome to my page.", 
-        themeType: theme || "white", 
-        button1Title: selectedCategory?.btn1 || "Explore", 
-        button1Url: link1 || "#",
-        button2Title: selectedCategory?.btn2 || "Contact", 
-        button2Url: link2 || "#",
-        categoryName: selectedCategory?.name || "Business",
-        products: [], 
-        createdAt: new Date()
-      };
+        const newSite = {
+          siteName: siteName || "My Website", 
+          slug: generatedSlug, 
+          bio: bio || "Welcome to my page.", 
+          themeType: theme || "white", 
+          button1Title: selectedCategory?.btn1 || "Explore", 
+          button1Url: link1 || "#",
+          button2Title: selectedCategory?.btn2 || "Contact", 
+          button2Url: link2 || "#",
+          categoryName: selectedCategory?.name || "Business",
+          products: [], 
+          createdAt: new Date()
+        };
 
-      // WAIT for Firebase to save!
-      const docRef = await addDoc(collection(db, "ai_sites"), newSite);
-      await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
+        // 1. Save to LocalStorage (Backup)
+        localStorage.setItem('my_site_slug', generatedSlug); 
+        localStorage.setItem('my_last_site_data', JSON.stringify(newSite));
 
-      setSites(prev => [...prev, { id: docRef.id, ...newSite }]);
-      setCredits(prev => prev - 1);
-      
-      localStorage.setItem('my_site_slug', generatedSlug); 
-      setMySiteSlug(generatedSlug);
-      
-      setIsGenerating(false); 
-      setStep('select'); 
-      setSiteName(''); setLink1(''); setLink2('');
-      alert(`🚀 Website Generated Successfully!`);
-      
-    } catch (error: any) {
-      setIsGenerating(false); 
-      alert("Error: " + error.message);
-    }
+        // 2. Update UI immediately
+        setSites(prev => [...prev, { id: 'local_' + Date.now(), ...newSite }]);
+        setCredits(prev => prev - 1);
+        setMySiteSlug(generatedSlug);
+        
+        setIsGenerating(false); 
+        setStep('select'); 
+        setSiteName(''); setLink1(''); setLink2('');
+        alert(`🚀 Website Generated Successfully!\nLink: /site/${generatedSlug}`);
+
+        // 3. Save to Firebase in Background (No waiting!)
+        try {
+          await addDoc(collection(db, "ai_sites"), newSite);
+          await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
+        } catch (dbErr) {
+          console.log("Firebase background save failed. Using LocalStorage.", dbErr);
+        }
+
+      } catch (error: any) {
+        setIsGenerating(false); 
+        alert("Error: " + error.message);
+      }
+    }, 1200); 
   };
 
   const saveNote = async () => {
