@@ -11,7 +11,6 @@ export default function PublicSite({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [siteDocId, setSiteDocId] = useState<string>('');
   
-  // 🔐 EDITOR STATE (Sirf Owner ke liye)
   const isOwner = localStorage.getItem('my_site_slug') === slug;
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [newProdName, setNewProdName] = useState('');
@@ -19,16 +18,29 @@ export default function PublicSite({ slug }: { slug: string }) {
   const [newProdLink, setNewProdLink] = useState('');
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setLoading(false);
+      return;
+    }
+
     const q = query(collection(db, "ai_sites"), where("slug", "==", slug));
     const unsub = onSnapshot(q, (snap) => {
       if (!snap.empty) {
         setSiteData(snap.docs[0].data());
         setSiteDocId(snap.docs[0].id);
       }
-      setLoading(false);
+      setLoading(false); // Data milte hi loading band
     });
-    return () => unsub();
+
+    // 🚀 MAGIC TIMEOUT: Agar 6 second mein data nahi aaya, toh loading force stop karo
+    const forceStopTimer = setTimeout(() => {
+      setLoading(false);
+    }, 6000);
+
+    return () => {
+      unsub();
+      clearTimeout(forceStopTimer);
+    };
   }, [slug]);
 
   const handleAddProduct = async () => {
@@ -38,28 +50,22 @@ export default function PublicSite({ slug }: { slug: string }) {
     const updatedProducts = [...(siteData.products || []), newProduct];
 
     try {
-      await updateDoc(doc(db, "ai_sites", siteDocId), {
-        products: updatedProducts
-      });
+      await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
       setNewProdName(''); setNewProdPrice(''); setNewProdLink('');
       alert("Product Added to your Website!");
-    } catch (e) {
-      alert("Error adding product.");
-    }
+    } catch (e) { alert("Error adding product."); }
   };
 
   const handleDeleteProduct = async (index: number) => {
     if(!window.confirm("Delete this product?")) return;
     const updatedProducts = siteData.products.filter((_: any, i: number) => i !== index);
     try {
-      await updateDoc(doc(db, "ai_sites", siteDocId), {
-        products: updatedProducts
-      });
+      await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
     } catch (e) { alert("Error deleting."); }
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0d1117]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div></div>;
-  if (!siteData) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]"><h1 className="text-2xl font-bold">404 - Site Not Found</h1></div>;
+  if (!siteData) return <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa]"><h1 className="text-2xl font-bold mb-2">404 - Site Not Found</h1><p className="text-gray-500 text-sm">This site might still be saving in the database.</p></div>;
 
   const theme = siteData.themeType || 'white';
   const isNeon = theme === 'neon';
@@ -76,7 +82,6 @@ export default function PublicSite({ slug }: { slug: string }) {
   return (
     <div className={`min-h-screen ${bgClass} font-sans pb-20 relative`}>
       
-      {/* Background Glows */}
       {(isNeon || isHacker) && (
         <>
           <div className={`fixed top-0 left-1/4 w-96 h-96 ${isNeon ? 'bg-pink-600' : 'bg-emerald-600'} rounded-full blur-[120px] opacity-20 pointer-events-none`}></div>
@@ -84,19 +89,14 @@ export default function PublicSite({ slug }: { slug: string }) {
         </>
       )}
 
-      {/* 🔐 SECRET EDIT BUTTON (Only visible to owner) */}
       {isOwner && (
-        <button 
-          onClick={() => setIsEditOpen(true)}
-          className={`fixed top-6 right-6 z-50 p-3 rounded-full text-white shadow-2xl animate-pulse ${accentColor}`}
-        >
+        <button onClick={() => setIsEditOpen(true)} className={`fixed top-6 right-6 z-50 p-3 rounded-full text-white shadow-2xl animate-pulse ${accentColor}`}>
           <Settings size={24} />
         </button>
       )}
 
       <div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
         
-        {/* Header */}
         <div className="flex justify-between items-center mb-12">
           <div className={`flex items-center gap-2 font-extrabold text-xl tracking-tight ${textMain}`}>
             <div className={`p-1.5 rounded-lg ${accentColor}`}><Sparkles size={16} className="text-white" /></div>
@@ -104,7 +104,6 @@ export default function PublicSite({ slug }: { slug: string }) {
           </div>
         </div>
 
-        {/* Hero Section */}
         <div className="flex flex-col md:flex-row gap-8 items-center mb-16">
           <div className="relative">
             <div className={`w-40 h-40 md:w-56 md:h-56 rounded-full border-4 ${isNeon ? 'border-pink-500' : isHacker ? 'border-emerald-500' : 'border-purple-100'} p-2 relative z-10`}>
@@ -125,14 +124,12 @@ export default function PublicSite({ slug }: { slug: string }) {
           </div>
         </div>
 
-        {/* 🛒 PRODUCTS SECTION */}
         {siteData.products && siteData.products.length > 0 && (
           <div className="mb-16">
             <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${textMain}`}><ShoppingBag className={accentText}/> Our Products</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {siteData.products.map((prod: any, idx: number) => (
                 <div key={idx} className={`p-6 rounded-2xl border transition hover:-translate-y-1 ${cardBg} flex flex-col relative group`}>
-                  {/* Secret Delete Button inside Card */}
                   {isOwner && (
                     <button onClick={() => handleDeleteProduct(idx)} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition shadow-lg z-20">
                       <Trash2 size={14} />
@@ -150,7 +147,6 @@ export default function PublicSite({ slug }: { slug: string }) {
           </div>
         )}
 
-        {/* Features Section */}
         <div className="mb-16">
           <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${textMain}`}><Star className={accentText}/> Why Choose Us?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -160,14 +156,12 @@ export default function PublicSite({ slug }: { slug: string }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className={`mt-20 pt-8 border-t text-center ${isNeon || isHacker ? 'border-white/10' : 'border-gray-200'}`}>
           <p className={`text-xs font-bold ${textSub} flex items-center justify-center gap-1`}><Sparkles size={14} className={accentText} /> Powered by WebCraft SaaS</p>
         </div>
 
       </div>
 
-      {/* 🔐 SECRET OWNER EDIT MODAL */}
       {isOwner && isEditOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
