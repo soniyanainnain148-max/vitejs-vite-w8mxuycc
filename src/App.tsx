@@ -49,6 +49,7 @@ function Dashboard({ user }: { user: any }) {
   const [sites, setSites] = useState<any[]>([]);
   const [isLoadingSites, setIsLoadingSites] = useState(true);
   const [credits, setCredits] = useState(0); 
+  const [username, setUsername] = useState("Loading..."); // 🚀 Username State
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   
@@ -84,9 +85,7 @@ function Dashboard({ user }: { user: any }) {
       
       if (snap.exists()) {
         setCredits(snap.data().credits || 0);
-      } else {
-        await setDoc(userRef, { credits: 0, email: user.email, createdAt: new Date() }); 
-        setCredits(0);
+        setUsername(snap.data().username || "User"); // 🚀 Fetch Username
       }
     };
     checkUser();
@@ -103,9 +102,6 @@ function Dashboard({ user }: { user: any }) {
       
       setSites(mySites);
       setIsLoadingSites(false);
-    }, (error) => {
-      console.error(error);
-      setIsLoadingSites(false);
     });
 
     const unsubNotes = onSnapshot(collection(db, "notes"), (snap) => {
@@ -119,7 +115,7 @@ function Dashboard({ user }: { user: any }) {
     });
 
     return () => { unsubSites(); unsubNotes(); unsubCust(); }; 
-  }, [USER_ID, user.email]);
+  }, [USER_ID]);
 
   const handleLogout = () => {
     if(window.confirm("Are you sure you want to logout?")) signOut(auth);
@@ -147,7 +143,8 @@ function Dashboard({ user }: { user: any }) {
     setIsGenerating(true);
     
     try {
-      const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+      // Slug banate waqt username + business name use karenge taaki unique lage
+      const generatedSlug = username + '-' + siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
       const newSite = {
         userId: USER_ID, 
@@ -228,7 +225,8 @@ function Dashboard({ user }: { user: any }) {
         </div>
 
         <div className="mt-8 bg-gray-50 border border-gray-200 p-5 rounded-2xl">
-          <p className="text-[10px] text-gray-400 font-bold mb-2 truncate">User: {user.email}</p>
+          {/* 🚀 Display Username instead of Email */}
+          <p className="text-[10px] text-gray-400 font-bold mb-2 truncate">@{username}</p>
           <div className="flex justify-between items-center mb-4">
             <span className="text-xs text-gray-500 font-bold uppercase flex items-center gap-1"><Wallet size={14}/> Credits</span>
             <span className="text-2xl font-black text-gray-900">{credits}</span>
