@@ -29,7 +29,6 @@ const CATEGORIES = [
 function Dashboard() {
   const [activeTab, setActiveTab] = useState('builder'); // builder, notes, customers
   
-  // Global States
   const [sites, setSites] = useState<any[]>([]);
   const [credits, setCredits] = useState(5); 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -39,7 +38,6 @@ function Dashboard() {
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Builder States
   const [step, setStep] = useState('select'); 
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [siteName, setSiteName] = useState('');
@@ -47,14 +45,11 @@ function Dashboard() {
   const [link1, setLink1] = useState('');
   const [link2, setLink2] = useState('');
   const [theme, setTheme] = useState('white');
-  const [productsInput, setProductsInput] = useState(''); // Format: Name, Price, Link (newline separated)
 
-  // Notes States
   const [notes, setNotes] = useState<any[]>([]);
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
 
-  // Customer CRM States
   const [customers, setCustomers] = useState<any[]>([]);
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
@@ -102,19 +97,18 @@ function Dashboard() {
     setIsGenerating(true);
     try {
       const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
-      
-      // Parse products input
-      const parsedProducts = productsInput.split('\n').filter(line => line.trim() !== '').map(line => {
-        const [name, price, link] = line.split(',');
-        return { name: name?.trim(), price: price?.trim(), link: link?.trim() || '#' };
-      });
 
       const newSite = {
-        siteName, slug: generatedSlug, bio, themeType: theme, 
-        button1Title: selectedCategory.btn1, button1Url: link1 || "#",
-        button2Title: selectedCategory.btn2, button2Url: link2 || "#",
-        categoryName: selectedCategory.name,
-        products: parsedProducts, // Add products
+        siteName: siteName || "My Website", 
+        slug: generatedSlug, 
+        bio: bio || "Welcome to my page.", 
+        themeType: theme || "white", 
+        button1Title: selectedCategory?.btn1 || "Explore", 
+        button1Url: link1 || "#",
+        button2Title: selectedCategory?.btn2 || "Contact", 
+        button2Url: link2 || "#",
+        categoryName: selectedCategory?.name || "Business",
+        products: [], // Empty products initially
         createdAt: new Date()
       };
 
@@ -123,10 +117,12 @@ function Dashboard() {
 
       setSites(prev => [...prev, { id: docRef.id, ...newSite }]);
       setCredits(prev => prev - 1);
-      localStorage.setItem('my_site_slug', generatedSlug);
+      
+      // 🔐 SAVING OWNERSHIP KEY: Yeh key sirf is phone mein save hogi. Koi aur edit nahi kar sakta.
+      localStorage.setItem('my_site_slug', generatedSlug); 
       setMySiteSlug(generatedSlug);
       
-      setIsGenerating(false); setStep('select'); setSiteName(''); setLink1(''); setLink2(''); setProductsInput('');
+      setIsGenerating(false); setStep('select'); setSiteName(''); setLink1(''); setLink2('');
       alert(`🚀 Website Generated Successfully!`);
     } catch (error: any) {
       setIsGenerating(false); alert("Error: " + error.message);
@@ -182,12 +178,11 @@ function Dashboard() {
       {/* MAIN CONTENT */}
       <div className="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full h-screen overflow-y-auto">
         
-        {/* === TAB 1: BUILDER === */}
         {activeTab === 'builder' && (
           <>
             <div className="mb-8">
               <h1 className="text-3xl font-extrabold text-gray-900">Site Builder</h1>
-              <p className="text-sm text-gray-500 mt-1">Create a new business website with products.</p>
+              <p className="text-sm text-gray-500 mt-1">Create your business website.</p>
             </div>
 
             {step === 'select' && (
@@ -228,11 +223,6 @@ function Dashboard() {
                     <input type="text" value={link2} onChange={(e) => setLink2(e.target.value)} placeholder={`Link for ${selectedCategory.btn2}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500" />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-gray-600 block mb-1">Add Products (Name, Price, WhatsApp Link - One per line)</label>
-                    <textarea value={productsInput} onChange={(e) => setProductsInput(e.target.value)} rows={3} placeholder="T-Shirt, 499, https://wa.me/91999...&#10;Shoes, 999, https://wa.me/91999..." className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500"></textarea>
-                  </div>
-
                   <div className="flex gap-3 mb-6 mt-4">
                     <button onClick={() => setTheme('white')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'white' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>White Theme</button>
                     <button onClick={() => setTheme('neon')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'neon' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Neon Theme</button>
@@ -248,7 +238,7 @@ function Dashboard() {
           </>
         )}
 
-        {/* === TAB 2: NOTES === */}
+        {/* NOTES & CUSTOMERS (Same as before) */}
         {activeTab === 'notes' && (
           <div className="animate-fade-in">
              <h1 className="text-3xl font-extrabold text-gray-900 mb-6">My Notes</h1>
@@ -269,7 +259,6 @@ function Dashboard() {
           </div>
         )}
 
-        {/* === TAB 3: CUSTOMERS === */}
         {activeTab === 'customers' && (
           <div className="animate-fade-in">
              <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Customer CRM</h1>
@@ -296,7 +285,7 @@ function Dashboard() {
         )}
       </div>
 
-      {/* TOP-UP MODAL (Same as before) */}
+      {/* TOP-UP MODAL */}
       {isTopUpOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
