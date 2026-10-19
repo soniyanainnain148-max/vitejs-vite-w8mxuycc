@@ -13,7 +13,6 @@ function App() {
   return <Dashboard />;
 }
 
-// 🏪 BUSINESS CATEGORIES LIST
 const CATEGORIES = [
   { id: 'gaming', name: 'Gaming / Esports', icon: <Gamepad2 size={24} />, defaultBio: 'Pro Gamer & Content Creator.', btn1: 'Watch Videos', btn2: 'Join Community' },
   { id: 'bakery', name: 'Bakery / Cafe', icon: <Utensils size={24} />, defaultBio: 'Freshly baked goods & delicious coffee.', btn1: 'View Menu', btn2: 'Order Now' },
@@ -29,11 +28,9 @@ function Dashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  // 🚀 BUILDER STEPS: 'select' -> 'details' -> 'theme'
   const [step, setStep] = useState('select'); 
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   
-  // Form States
   const [siteName, setSiteName] = useState('');
   const [bio, setBio] = useState('');
   const [link1, setLink1] = useState('');
@@ -82,58 +79,63 @@ function Dashboard() {
     }, 1000); 
   };
 
-  // 🚀 CATEGORY SELECT HONE PAR
   const handleCategorySelect = (cat: any) => {
     setSelectedCategory(cat);
     setBio(cat.defaultBio);
     setStep('details');
   };
 
-  // 🚀 FINAL GENERATE (Save to Firebase)
+  // 🚀 INSTANT GENERATE (UI pehle, Database baad mein) 🚀
   const handleGenerate = async () => {
     if (!siteName) return alert("Please enter your business name.");
     if (credits < 1) return alert("Insufficient credits! Please top-up.");
 
     setIsGenerating(true);
     
-    try {
-      const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+    // 1. Thoda delay taaki user ko "Building" feel aaye
+    setTimeout(() => {
+      try {
+        const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-      const newSite = {
-        id: 'site_' + Date.now(),
-        siteName: siteName, 
-        slug: generatedSlug, 
-        bio: bio,
-        themeType: theme, 
-        button1Title: selectedCategory.btn1,
-        button1Url: link1 || "#",
-        button2Title: selectedCategory.btn2,
-        button2Url: link2 || "#",
-        categoryName: selectedCategory.name,
-        createdAt: new Date()
-      };
+        const newSite = {
+          id: 'site_' + Date.now(),
+          siteName: siteName, 
+          slug: generatedSlug, 
+          bio: bio,
+          themeType: theme, 
+          button1Title: selectedCategory.btn1,
+          button1Url: link1 || "#",
+          button2Title: selectedCategory.btn2,
+          button2Url: link2 || "#",
+          categoryName: selectedCategory.name,
+          createdAt: new Date()
+        };
 
-      // Save to Database
-      await addDoc(collection(db, "ai_sites"), newSite);
-      
-      // Update Local UI
-      setSites(prev => [...prev, newSite]);
-      setCredits(prev => prev - 1);
-      localStorage.setItem('my_site_slug', generatedSlug);
-      setMySiteSlug(generatedSlug);
-      
-      const userRef = doc(db, "users", USER_ID);
-      await updateDoc(userRef, { credits: credits - 1 });
+        // 2. UI UPDATE (Turant!)
+        setSites(prev => [...prev, newSite]);
+        setCredits(prev => prev - 1);
+        localStorage.setItem('my_site_slug', generatedSlug);
+        setMySiteSlug(generatedSlug);
+        
+        setIsGenerating(false); 
+        setStep('select'); 
+        setSiteName(''); setLink1(''); setLink2('');
+        
+        alert(`🚀 Website Generated Successfully!`);
 
-      setIsGenerating(false); 
-      setStep('select'); // Reset Builder
-      setSiteName(''); setLink1(''); setLink2('');
-      alert(`🚀 Website Generated Successfully!`);
-      
-    } catch (error: any) {
-      setIsGenerating(false);
-      alert("Error: " + error.message);
-    }
+        // 3. BACKGROUND FIREBASE SAVE (Bina UI ko roke)
+        addDoc(collection(db, "ai_sites"), newSite).then(() => {
+          const userRef = doc(db, "users", USER_ID);
+          updateDoc(userRef, { credits: credits - 1 });
+        }).catch((err) => {
+          console.log("Firebase Background Save Failed:", err);
+        });
+
+      } catch (error: any) {
+        setIsGenerating(false);
+        alert("Error: " + error.message);
+      }
+    }, 1200); // 1.2 second ka delay
   };
 
   const copyLink = (slug: string) => {
@@ -145,7 +147,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col md:flex-row font-sans text-gray-800">
       
-      {/* SIDEBAR (Same as before) */}
+      {/* SIDEBAR */}
       <div className="w-full md:w-64 bg-white border-r border-gray-200 p-4 flex flex-col justify-between md:h-screen sticky top-0 z-40">
         <div>
           <div className="flex items-center gap-2 mb-10 px-2 mt-2">
@@ -221,11 +223,11 @@ function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-gray-600 block mb-1">Link 1 (For {selectedCategory.btn1})</label>
-                  <input type="text" value={link1} onChange={(e) => setLink1(e.target.value)} placeholder="https://youtube.com / https://wa.me/..." className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500" />
+                  <input type="text" value={link1} onChange={(e) => setLink1(e.target.value)} placeholder="https://..." className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500" />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-gray-600 block mb-1">Link 2 (For {selectedCategory.btn2})</label>
-                  <input type="text" value={link2} onChange={(e) => setLink2(e.target.value)} placeholder="https://instagram.com / https://..." className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500" />
+                  <input type="text" value={link2} onChange={(e) => setLink2(e.target.value)} placeholder="https://..." className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500" />
                 </div>
               </div>
             </div>
