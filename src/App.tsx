@@ -1,21 +1,39 @@
 import { useState, useEffect } from 'react';
 import { 
-  Globe, Loader2, Code2, Wallet, Zap, Sparkles, Send, ExternalLink, 
+  Globe, Loader2, Code2, Wallet, Zap, Sparkles, ExternalLink, 
   Copy, Check, X, QrCode, ShieldCheck, Store, Utensils, Dumbbell, 
-  Gamepad2, Stethoscope, Briefcase, ArrowLeft, FileText, Users, Trash2, Plus, Save
+  Gamepad2, Stethoscope, Briefcase, ArrowLeft, FileText, Users, Trash2, Plus, Save, LogOut, AlertCircle
 } from 'lucide-react';
 import PublicSite from './components/PublicSite';
-import { db } from './firebase';
+import Auth from './components/Auth';
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteDoc } from "firebase/firestore";
 
 function App() {
+  const [user, setUser] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
   const currentPath = window.location.pathname;
   const cleanPath = currentPath.split('?')[0].replace(/\/$/, ''); 
   const isPublicSite = cleanPath.startsWith('/site/');
   const siteSlug = isPublicSite ? cleanPath.split('/site/')[1] : '';
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   if (isPublicSite) return <PublicSite slug={siteSlug} />;
-  return <Dashboard />;
+  if (isAuthLoading) return <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center"><Loader2 className="animate-spin text-purple-600" size={40} /></div>;
+  
+  // 🚀 Agar user login nahi hai, toh Auth page dikhao
+  if (!user) return <Auth />;
+
+  return <Dashboard user={user} />;
 }
 
 const CATEGORIES = [
@@ -27,14 +45,15 @@ const CATEGORIES = [
   { id: 'business', name: 'Agency / Business', icon: <Briefcase size={24} />, defaultBio: 'Professional services for your growth.', btn1: 'Our Services', btn2: 'Contact Us' },
 ];
 
-function Dashboard() {
+function Dashboard({ user }: { user: any }) {
   const [activeTab, setActiveTab] = useState('builder');
   
   const [sites, setSites] = useState<any[]>([]);
-  const [credits, setCredits] = useState(5); 
+  const [isLoadingSites, setIsLoadingSites] = useState(true);
+  const [credits, setCredits] = useState(0); // 🚀 Default 0
   const [isGenerating, setIsGenerating] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [mySiteSlug, setMySiteSlug] = useState<string | null>(localStorage.getItem('my_site_slug'));
+  const [copied, setCopied] = useState<string | null>(null);
+  
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [utr, setUtr] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -58,23 +77,63 @@ function Dashboard() {
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
   const TOPUP_AMOUNT = 50;
   const CREDITS_TO_ADD = 5;
-  const USER_ID = "user_arpit_123"; 
+  const USER_ID = user.uid; 
 
   useEffect(() => {
-    const fetchUser = async () => {
+    // 🚀 1. Check User Credits & Set to 0 for New Users
+    const checkUser = async () => {
       const userRef = doc(db, "users", USER_ID);
       const snap = await getDoc(userRef);
-      if (snap.exists()) setCredits(snap.data().credits || 0);
-      else await setDoc(userRef, { credits: 5 }); 
+      
+      if (snap.exists()) {
+        setCredits(snap.data().credits || 0);
+      } else {
+        // Naya user: Credits 0 karo
+        await setDoc(userRef, { 
+          credits: 0, 
+          email: user.email,
+          createdAt: new Date()
+        }); 
+        setCredits(0);
+      }
     };
-    fetchUser();
+    checkUser();
 
-    const unsubSites = onSnapshot(collection(db, "ai_sites"), (snap) => setSites(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubNotes = onSnapshot(collection(db, "notes"), (snap) => setNotes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubCust = onSnapshot(collection(db, "customers"), (snap) => setCustomers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    // 🚀 2. Fetch ONLY this user's websites
+    const unsubSites = onSnapshot(collection(db, "ai_sites"), (snap) => {
+      const allSites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Filter by User ID
+      const mySites = allSites.filter((site: any) => site.userId === USER_ID);
+      
+      // Sort (Newest first)
+      mySites.sort((a: any, b: any) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        return timeB - timeA;
+      });
+      
+      setSites(mySites);
+      setIsLoadingSites(false);
+    });
+
+    // 🚀 3. Fetch ONLY this user's notes
+    const unsubNotes = onSnapshot(collection(db, "notes"), (snap) => {
+      const allNotes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setNotes(allNotes.filter((n: any) => n.userId === USER_ID));
+    });
+
+    // 🚀 4. Fetch ONLY this user's customers
+    const unsubCust = onSnapshot(collection(db, "customers"), (snap) => {
+      const allCust = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setCustomers(allCust.filter((c: any) => c.userId === USER_ID));
+    });
 
     return () => { unsubSites(); unsubNotes(); unsubCust(); }; 
-  }, []);
+  }, [USER_ID]);
+
+  const handleLogout = () => {
+    if(window.confirm("Are you sure you want to logout?")) signOut(auth);
+  };
 
   const handleVerifyPayment = async () => {
     if (utr.length < 8) return alert("Kripya valid UTR daalein!");
@@ -91,76 +150,75 @@ function Dashboard() {
     }, 1000); 
   };
 
-  // 🚀 INSTANT GENERATE (Bulletproof)
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!siteName) return alert("Please enter your business name.");
-    if (credits < 1) return alert("Insufficient credits!");
+    // 🚀 Check Credits
+    if (credits < 1) return alert("Aapke paas credits nahi hain! Please top-up first.");
 
     setIsGenerating(true);
     
-    // Thoda delay taaki user ko 'Building' feel aaye
-    setTimeout(async () => {
-      try {
-        const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+    try {
+      const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-        const newSite = {
-          siteName: siteName || "My Website", 
-          slug: generatedSlug, 
-          bio: bio || "Welcome to my page.", 
-          themeType: theme || "white", 
-          button1Title: selectedCategory?.btn1 || "Explore", 
-          button1Url: link1 || "#",
-          button2Title: selectedCategory?.btn2 || "Contact", 
-          button2Url: link2 || "#",
-          categoryName: selectedCategory?.name || "Business",
-          products: [], 
-          createdAt: new Date()
-        };
+      const newSite = {
+        userId: USER_ID, 
+        siteName: siteName, 
+        slug: generatedSlug, 
+        bio: bio || "Welcome to my page.", 
+        themeType: theme || "white", 
+        button1Title: selectedCategory?.btn1 || "Explore", 
+        button1Url: link1 || "#",
+        button2Title: selectedCategory?.btn2 || "Contact", 
+        button2Url: link2 || "#",
+        categoryName: selectedCategory?.name || "Business",
+        products: [], 
+        createdAt: new Date()
+      };
 
-        // 1. Save to LocalStorage (Backup)
-        localStorage.setItem('my_site_slug', generatedSlug); 
-        localStorage.setItem('my_last_site_data', JSON.stringify(newSite));
+      // Save to Firebase
+      const docRef = await addDoc(collection(db, "ai_sites"), newSite);
+      
+      // Deduct Credits
+      await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
+      
+      // Update UI locally
+      setSites(prev => [{ id: docRef.id, ...newSite }, ...prev]);
 
-        // 2. Update UI immediately
-        setSites(prev => [...prev, { id: 'local_' + Date.now(), ...newSite }]);
-        setCredits(prev => prev - 1);
-        setMySiteSlug(generatedSlug);
-        
-        setIsGenerating(false); 
-        setStep('select'); 
-        setSiteName(''); setLink1(''); setLink2('');
-        alert(`🚀 Website Generated Successfully!\nLink: /site/${generatedSlug}`);
+      setCredits(prev => prev - 1);
+      setIsGenerating(false); 
+      setStep('select'); 
+      setSiteName(''); setLink1(''); setLink2('');
+      alert(`🚀 Website Generated Successfully!`);
 
-        // 3. Save to Firebase in Background (No waiting!)
-        try {
-          await addDoc(collection(db, "ai_sites"), newSite);
-          await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
-        } catch (dbErr) {
-          console.log("Firebase background save failed. Using LocalStorage.", dbErr);
-        }
+    } catch (error: any) {
+      setIsGenerating(false); 
+      alert("❌ Error saving website: " + error.message);
+    }
+  };
 
-      } catch (error: any) {
-        setIsGenerating(false); 
-        alert("Error: " + error.message);
-      }
-    }, 1200); 
+  const handleDeleteSite = async (id: string) => {
+    if(window.confirm("Delete this website permanently?")) {
+      await deleteDoc(doc(db, "ai_sites", id));
+      setSites(prev => prev.filter(s => s.id !== id));
+    }
   };
 
   const saveNote = async () => {
     if(!newNoteTitle) return;
-    await addDoc(collection(db, "notes"), { title: newNoteTitle, content: newNoteContent, createdAt: new Date() });
+    await addDoc(collection(db, "notes"), { userId: USER_ID, title: newNoteTitle, content: newNoteContent, createdAt: new Date() });
     setNewNoteTitle(''); setNewNoteContent('');
   };
 
   const saveCustomer = async () => {
     if(!newCustName) return;
-    await addDoc(collection(db, "customers"), { name: newCustName, phone: newCustPhone, createdAt: new Date() });
+    await addDoc(collection(db, "customers"), { userId: USER_ID, name: newCustName, phone: newCustPhone, createdAt: new Date() });
     setNewCustName(''); setNewCustPhone('');
   };
 
   const copyLink = (slug: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/site/${slug}`);
-    setCopied(true); setTimeout(() => setCopied(false), 2000);
+    setCopied(slug); 
+    setTimeout(() => setCopied(null), 2000);
   };
 
   return (
@@ -169,9 +227,12 @@ function Dashboard() {
       {/* SIDEBAR */}
       <div className="w-full md:w-64 bg-white border-r border-gray-200 p-4 flex flex-col justify-between md:h-screen sticky top-0 z-40">
         <div>
-          <div className="flex items-center gap-2 mb-8 px-2 mt-2">
-            <div className="bg-purple-600 p-2 rounded-xl shadow-md"><Code2 size={20} className="text-white" /></div>
-            <span className="font-extrabold text-lg text-gray-900">WEBCRAFT PRO</span>
+          <div className="flex items-center justify-between mb-8 px-2 mt-2">
+            <div className="flex items-center gap-2">
+              <div className="bg-purple-600 p-2 rounded-xl shadow-md"><Code2 size={20} className="text-white" /></div>
+              <span className="font-extrabold text-lg text-gray-900">WEBCRAFT</span>
+            </div>
+            <button onClick={handleLogout} className="text-gray-400 hover:text-red-500" title="Logout"><LogOut size={18} /></button>
           </div>
           
           <div className="flex flex-col gap-2">
@@ -182,6 +243,7 @@ function Dashboard() {
         </div>
 
         <div className="mt-8 bg-gray-50 border border-gray-200 p-5 rounded-2xl">
+          <p className="text-[10px] text-gray-400 font-bold mb-2 truncate">User: {user.email}</p>
           <div className="flex justify-between items-center mb-4">
             <span className="text-xs text-gray-500 font-bold uppercase flex items-center gap-1"><Wallet size={14}/> Credits</span>
             <span className="text-2xl font-black text-gray-900">{credits}</span>
@@ -194,17 +256,14 @@ function Dashboard() {
 
       {/* MAIN CONTENT */}
       <div className="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full h-screen overflow-y-auto">
-        
         {activeTab === 'builder' && (
           <>
-            <div className="mb-8">
-              <h1 className="text-3xl font-extrabold text-gray-900">Site Builder</h1>
-              <p className="text-sm text-gray-500 mt-1">Create your business website.</p>
-            </div>
-
+            <div className="mb-8"><h1 className="text-3xl font-extrabold text-gray-900">Site Builder</h1></div>
+            
             {step === 'select' && (
               <div className="animate-fade-in">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                <h2 className="text-sm font-bold text-gray-600 mb-4 uppercase tracking-wider">1. Choose Business Type</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
                   {CATEGORIES.map((cat) => (
                     <button key={cat.id} onClick={() => { setSelectedCategory(cat); setBio(cat.defaultBio); setStep('details'); }} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-purple-500 transition flex flex-col items-center gap-3">
                       <div className="p-3 bg-purple-50 rounded-xl text-purple-600">{cat.icon}</div>
@@ -213,41 +272,79 @@ function Dashboard() {
                   ))}
                 </div>
 
-                {mySiteSlug && sites.filter(s => s.slug === mySiteSlug).map(site => (
-                  <div key={site.id} className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
-                    <div>
-                      <h4 className="text-gray-900 font-bold text-lg">{site.siteName}</h4>
-                      <p className="text-xs text-purple-600 font-mono mt-1">/site/{site.slug}</p>
+                {/* 🚀 WEBSITE HISTORY LIST */}
+                <div className="mt-12 border-t border-gray-200 pt-8">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-6"><Globe size={20} className="text-purple-600"/> My Websites ({sites.length})</h2>
+                  
+                  {isLoadingSites ? (
+                    <div className="text-center py-10 bg-white rounded-xl border border-gray-200">
+                      <Loader2 className="animate-spin text-purple-600 mx-auto mb-2" size={24} />
+                      <p className="text-sm text-gray-500">Loading history...</p>
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto">
-                      <button onClick={() => copyLink(site.slug)} className="bg-gray-50 border px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">{copied ? <Check size={14} className="text-green-500"/> : <Copy size={14} />} Copy</button>
-                      <a href={`/site/${site.slug}`} target="_blank" rel="noreferrer" className="bg-purple-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">Visit</a>
+                  ) : sites.length === 0 ? (
+                    <div className="text-sm text-gray-500 bg-white p-6 rounded-xl border border-gray-200 text-center flex flex-col items-center justify-center">
+                      <AlertCircle size={32} className="text-gray-300 mb-2" />
+                      <p>No websites found in history.</p>
+                      <p className="text-xs mt-2 text-gray-400">Generate a new website above to see it here.</p>
                     </div>
-                  </div>
-                ))}
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {sites.map(site => (
+                        <div key={site.id} className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="text-gray-900 font-bold text-lg">{site.siteName}</h4>
+                              <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-bold uppercase">{site.categoryName}</span>
+                            </div>
+                            <button onClick={() => handleDeleteSite(site.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 size={16}/></button>
+                          </div>
+                          
+                          <p className="text-xs text-purple-600 font-mono truncate">/site/{site.slug}</p>
+                          
+                          <div className="flex gap-2 w-full">
+                            <button onClick={() => copyLink(site.slug)} className="flex-1 bg-gray-50 border border-gray-200 hover:bg-gray-100 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition">
+                              {copied === site.slug ? <Check size={14} className="text-green-500"/> : <Copy size={14} />} {copied === site.slug ? 'Copied!' : 'Copy Link'}
+                            </button>
+                            <a href={`/site/${site.slug}`} target="_blank" rel="noreferrer" className="flex-1 bg-purple-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition shadow-sm">
+                              <ExternalLink size={14} /> Visit
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {step === 'details' && selectedCategory && (
-              <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-sm animate-fade-in">
-                <button onClick={() => setStep('select')} className="text-xs font-bold text-gray-500 hover:text-gray-900 mb-6 flex items-center gap-1"><ArrowLeft size={14}/> Back</button>
+              <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-sm animate-fade-in max-w-2xl mx-auto">
+                <button onClick={() => setStep('select')} className="text-xs font-bold text-gray-500 hover:text-gray-900 mb-6 flex items-center gap-1"><ArrowLeft size={14}/> Back to Categories</button>
+                <h2 className="text-sm font-bold text-gray-600 mb-6 uppercase tracking-wider flex items-center gap-2">
+                  <span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center">2</span> 
+                  Enter {selectedCategory.name} Details
+                </h2>
                 <div className="space-y-4">
-                  <input type="text" value={siteName} onChange={(e) => setSiteName(e.target.value)} placeholder="Business Name" className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500" />
-                  <input type="text" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short Tagline" className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500" />
+                  <input type="text" value={siteName} onChange={(e) => setSiteName(e.target.value)} placeholder="Business Name" className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
+                  <input type="text" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short Tagline" className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <input type="text" value={link1} onChange={(e) => setLink1(e.target.value)} placeholder={`Link for ${selectedCategory.btn1}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500" />
-                    <input type="text" value={link2} onChange={(e) => setLink2(e.target.value)} placeholder={`Link for ${selectedCategory.btn2}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500" />
+                    <input type="text" value={link1} onChange={(e) => setLink1(e.target.value)} placeholder={`Link for ${selectedCategory.btn1}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
+                    <input type="text" value={link2} onChange={(e) => setLink2(e.target.value)} placeholder={`Link for ${selectedCategory.btn2}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
                   </div>
 
-                  <div className="flex gap-3 mb-6 mt-4">
-                    <button onClick={() => setTheme('white')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'white' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>White Theme</button>
-                    <button onClick={() => setTheme('neon')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'neon' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Neon Theme</button>
-                    <button onClick={() => setTheme('hacker')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'hacker' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Hacker Theme</button>
+                  <h2 className="text-sm font-bold text-gray-600 mt-6 mb-4 uppercase tracking-wider flex items-center gap-2">
+                    <span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center">3</span> 
+                    Choose Theme
+                  </h2>
+                  <div className="flex gap-3 mb-6">
+                    <button onClick={() => setTheme('white')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'white' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>White</button>
+                    <button onClick={() => setTheme('neon')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'neon' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Neon</button>
+                    <button onClick={() => setTheme('hacker')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'hacker' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Hacker</button>
                   </div>
 
                   <button onClick={handleGenerate} disabled={isGenerating} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-bold flex justify-center items-center gap-2 shadow-lg">
-                    {isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />} Generate Website
+                    {isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />} Generate Website (1 Credit)
                   </button>
                 </div>
               </div>
@@ -255,6 +352,7 @@ function Dashboard() {
           </>
         )}
 
+        {/* NOTES & CUSTOMERS */}
         {activeTab === 'notes' && (
           <div className="animate-fade-in">
              <h1 className="text-3xl font-extrabold text-gray-900 mb-6">My Notes</h1>
