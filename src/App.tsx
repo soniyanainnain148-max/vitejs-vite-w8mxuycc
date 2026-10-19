@@ -10,8 +10,10 @@ import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteD
 
 function App() {
   const currentPath = window.location.pathname;
-  const isPublicSite = currentPath.startsWith('/site/');
-  const siteSlug = isPublicSite ? currentPath.split('/site/')[1] : '';
+  // 🚀 FIX: URL se ?v= jaisa kuch bhi hata kar sirf slug nikaalna
+  const cleanPath = currentPath.split('?')[0]; 
+  const isPublicSite = cleanPath.startsWith('/site/');
+  const siteSlug = isPublicSite ? cleanPath.split('/site/')[1].replace(/\/$/, '') : '';
 
   if (isPublicSite) return <PublicSite slug={siteSlug} />;
   return <Dashboard />;
@@ -90,21 +92,19 @@ function Dashboard() {
     }, 1000); 
   };
 
-  // 🚀 INSTANT GENERATE FIX (No more waiting for Firebase)
   const handleGenerate = () => {
     if (!siteName) return alert("Please enter your business name.");
     if (credits < 1) return alert("Insufficient credits! Please top-up.");
 
     setIsGenerating(true);
     
-    // 1.5 second baad UI ko update karo, chahe Firebase save ho ya na ho
     setTimeout(async () => {
       try {
         const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
+        // Default values taaki undefined error na aaye
         const newSite = {
-          id: 'local_' + Date.now(),
-          siteName: siteName, 
+          siteName: siteName || "My Website", 
           slug: generatedSlug, 
           bio: bio || "Welcome to my page.", 
           themeType: theme || "white", 
@@ -118,7 +118,7 @@ function Dashboard() {
         };
 
         // UI Turant Update Karo
-        setSites(prev => [...prev, newSite]);
+        setSites(prev => [...prev, { id: 'local_' + Date.now(), ...newSite }]);
         setCredits(prev => prev - 1);
         localStorage.setItem('my_site_slug', generatedSlug); 
         setMySiteSlug(generatedSlug);
@@ -133,14 +133,14 @@ function Dashboard() {
           await addDoc(collection(db, "ai_sites"), newSite);
           await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
         } catch (dbErr) {
-          console.log("Background Firebase save failed:", dbErr);
+          console.log("Firebase Save Failed:", dbErr);
         }
 
       } catch (error: any) {
         setIsGenerating(false); 
         alert("Error: " + error.message);
       }
-    }, 1200); // 1.2 second delay taaki 'Generating' dikhe thoda sa
+    }, 1200); 
   };
 
   const saveNote = async () => {
@@ -252,7 +252,7 @@ function Dashboard() {
           </>
         )}
 
-        {/* NOTES & CUSTOMERS (Same as before) */}
+        {/* NOTES & CUSTOMERS */}
         {activeTab === 'notes' && (
           <div className="animate-fade-in">
              <h1 className="text-3xl font-extrabold text-gray-900 mb-6">My Notes</h1>
