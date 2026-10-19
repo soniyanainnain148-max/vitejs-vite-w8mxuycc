@@ -173,7 +173,7 @@ function Dashboard({ user }: { user: any }) {
       setIsGenerating(false); 
       setStep('select'); 
       setSiteName(''); setLink1(''); setLink2('');
-      alert(`🚀 Website Generated Successfully! Scroll down to see your websites.`);
+      alert(`🚀 Website Generated Successfully!`);
 
     } catch (error: any) {
       setIsGenerating(false); 
