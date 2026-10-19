@@ -4,21 +4,21 @@ export default async function handler(req, res) {
   }
 
   const { prompt } = req.body;
-  const apiKey = process.env.GROQ_API_KEY; 
+  const apiKey = process.env.OPENROUTER_API_KEY; 
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'Groq API Key missing. Check Vercel ENV.' });
+    return res.status(500).json({ error: 'OpenRouter API Key missing. Check Vercel ENV.' });
   }
 
   try {
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}` 
       },
       body: JSON.stringify({
-        model: "mixtral-8x7b-32768", // 👈 Sabse stable model
+        model: "meta-llama/llama-3.1-8b-instruct:free", // 👈 Sabse stable free model
         messages: [
           { 
             role: "system", 
@@ -34,8 +34,8 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Groq API Error:", data);
-      return res.status(response.status).json({ error: data.error?.message || "Groq API Error" });
+      console.error("OpenRouter API Error:", data);
+      return res.status(status?.response || 500).json({ error: data.error?.message || "OpenRouter API Error" });
     }
 
     const aiText = data.choices[0].message.content;
