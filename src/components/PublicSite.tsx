@@ -1,21 +1,62 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ShieldCheck, Zap, Star, Phone, Sparkles, MapPin, ShoppingBag, ExternalLink } from 'lucide-react';
+import { 
+  ShieldCheck, Zap, Star, Phone, Sparkles, ShoppingBag, 
+  Settings, X, Plus, Trash2, Save
+} from 'lucide-react';
 
 export default function PublicSite({ slug }: { slug: string }) {
   const [siteData, setSiteData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [siteDocId, setSiteDocId] = useState<string>('');
+  
+  // 🔐 EDITOR STATE (Sirf Owner ke liye)
+  const isOwner = localStorage.getItem('my_site_slug') === slug;
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [newProdName, setNewProdName] = useState('');
+  const [newProdPrice, setNewProdPrice] = useState('');
+  const [newProdLink, setNewProdLink] = useState('');
 
   useEffect(() => {
     if (!slug) return;
     const q = query(collection(db, "ai_sites"), where("slug", "==", slug));
     const unsub = onSnapshot(q, (snap) => {
-      if (!snap.empty) setSiteData(snap.docs[0].data());
+      if (!snap.empty) {
+        setSiteData(snap.docs[0].data());
+        setSiteDocId(snap.docs[0].id);
+      }
       setLoading(false);
     });
     return () => unsub();
   }, [slug]);
+
+  const handleAddProduct = async () => {
+    if (!newProdName || !newProdPrice) return alert("Name aur Price zaroori hai!");
+    
+    const newProduct = { name: newProdName, price: newProdPrice, link: newProdLink || "#" };
+    const updatedProducts = [...(siteData.products || []), newProduct];
+
+    try {
+      await updateDoc(doc(db, "ai_sites", siteDocId), {
+        products: updatedProducts
+      });
+      setNewProdName(''); setNewProdPrice(''); setNewProdLink('');
+      alert("Product Added to your Website!");
+    } catch (e) {
+      alert("Error adding product.");
+    }
+  };
+
+  const handleDeleteProduct = async (index: number) => {
+    if(!window.confirm("Delete this product?")) return;
+    const updatedProducts = siteData.products.filter((_: any, i: number) => i !== index);
+    try {
+      await updateDoc(doc(db, "ai_sites", siteDocId), {
+        products: updatedProducts
+      });
+    } catch (e) { alert("Error deleting."); }
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0d1117]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div></div>;
   if (!siteData) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]"><h1 className="text-2xl font-bold">404 - Site Not Found</h1></div>;
@@ -33,7 +74,7 @@ export default function PublicSite({ slug }: { slug: string }) {
   const accentGlow = isNeon ? 'shadow-[0_0_30px_rgba(236,72,153,0.3)]' : isHacker ? 'shadow-[0_0_30px_rgba(16,185,129,0.3)]' : 'shadow-xl';
 
   return (
-    <div className={`min-h-screen ${bgClass} font-sans pb-20`}>
+    <div className={`min-h-screen ${bgClass} font-sans pb-20 relative`}>
       
       {/* Background Glows */}
       {(isNeon || isHacker) && (
@@ -41,6 +82,16 @@ export default function PublicSite({ slug }: { slug: string }) {
           <div className={`fixed top-0 left-1/4 w-96 h-96 ${isNeon ? 'bg-pink-600' : 'bg-emerald-600'} rounded-full blur-[120px] opacity-20 pointer-events-none`}></div>
           <div className={`fixed bottom-0 right-1/4 w-96 h-96 ${isNeon ? 'bg-purple-600' : 'bg-teal-600'} rounded-full blur-[120px] opacity-20 pointer-events-none`}></div>
         </>
+      )}
+
+      {/* 🔐 SECRET EDIT BUTTON (Only visible to owner) */}
+      {isOwner && (
+        <button 
+          onClick={() => setIsEditOpen(true)}
+          className={`fixed top-6 right-6 z-50 p-3 rounded-full text-white shadow-2xl animate-pulse ${accentColor}`}
+        >
+          <Settings size={24} />
+        </button>
       )}
 
       <div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
@@ -74,18 +125,22 @@ export default function PublicSite({ slug }: { slug: string }) {
           </div>
         </div>
 
-        {/* 🛒 PRODUCTS SECTION (Store) */}
+        {/* 🛒 PRODUCTS SECTION */}
         {siteData.products && siteData.products.length > 0 && (
           <div className="mb-16">
             <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${textMain}`}><ShoppingBag className={accentText}/> Our Products</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {siteData.products.map((prod: any, idx: number) => (
-                <div key={idx} className={`p-6 rounded-2xl border transition hover:-translate-y-1 ${cardBg} flex flex-col`}>
+                <div key={idx} className={`p-6 rounded-2xl border transition hover:-translate-y-1 ${cardBg} flex flex-col relative group`}>
+                  {/* Secret Delete Button inside Card */}
+                  {isOwner && (
+                    <button onClick={() => handleDeleteProduct(idx)} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition shadow-lg z-20">
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                   <div className="w-full h-32 bg-gray-200 rounded-xl mb-4 flex items-center justify-center opacity-50"><ShoppingBag size={32}/></div>
                   <h3 className={`font-bold text-lg mb-1 ${textMain}`}>{prod.name}</h3>
                   <p className={`text-2xl font-extrabold mb-4 ${accentText}`}>₹{prod.price}</p>
-                  
-                  {/* WhatsApp Order Button */}
                   <a href={prod.link || "#"} target="_blank" rel="noreferrer" className={`mt-auto w-full py-3 rounded-xl font-bold text-white text-center flex items-center justify-center gap-2 ${accentColor} ${accentGlow}`}>
                     <Phone size={16}/> Buy Now
                   </a>
@@ -111,6 +166,26 @@ export default function PublicSite({ slug }: { slug: string }) {
         </div>
 
       </div>
+
+      {/* 🔐 SECRET OWNER EDIT MODAL */}
+      {isOwner && isEditOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+            <button onClick={() => setIsEditOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800"><X size={20} /></button>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Owner Panel</h2>
+            <p className="text-xs text-gray-500 mb-4">Only you can see this panel. Add products to your website.</p>
+            
+            <div className="space-y-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+              <input type="text" placeholder="Product Name (e.g. T-Shirt)" value={newProdName} onChange={e => setNewProdName(e.target.value)} className="w-full border p-2 rounded-lg text-sm" />
+              <input type="text" placeholder="Price (e.g. 499)" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} className="w-full border p-2 rounded-lg text-sm" />
+              <input type="text" placeholder="WhatsApp/Order Link" value={newProdLink} onChange={e => setNewProdLink(e.target.value)} className="w-full border p-2 rounded-lg text-sm" />
+              <button onClick={handleAddProduct} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-1"><Plus size={16}/> Add Product</button>
+            </div>
+
+            <button onClick={() => setIsEditOpen(false)} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"><Save size={18}/> Done Editing</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
