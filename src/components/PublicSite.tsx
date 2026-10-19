@@ -3,7 +3,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { db } from '../firebase';
 import { 
   ShieldCheck, Zap, Star, Phone, Sparkles, ShoppingBag, 
-  Settings, X, Plus, Trash2, Save
+  Settings, X, Plus, Trash2, Save, Loader2
 } from 'lucide-react';
 
 export default function PublicSite({ slug }: { slug: string }) {
@@ -18,24 +18,28 @@ export default function PublicSite({ slug }: { slug: string }) {
   const [newProdLink, setNewProdLink] = useState('');
 
   useEffect(() => {
-    if (!slug) {
+    // 🚀 Clean the slug just in case it has spaces or encoded chars
+    const cleanSlug = decodeURIComponent(slug).trim();
+    
+    if (!cleanSlug) {
       setLoading(false);
       return;
     }
 
-    const q = query(collection(db, "ai_sites"), where("slug", "==", slug));
+    const q = query(collection(db, "ai_sites"), where("slug", "==", cleanSlug));
     const unsub = onSnapshot(q, (snap) => {
       if (!snap.empty) {
         setSiteData(snap.docs[0].data());
         setSiteDocId(snap.docs[0].id);
+        setLoading(false); 
+      } else {
+        // If empty, wait 2 seconds before showing 404 (in case it's still saving)
+        setTimeout(() => setLoading(false), 2000);
       }
-      setLoading(false); // Data milte hi loading band
     });
 
-    // 🚀 MAGIC TIMEOUT: Agar 6 second mein data nahi aaya, toh loading force stop karo
-    const forceStopTimer = setTimeout(() => {
-      setLoading(false);
-    }, 6000);
+    // Force stop after 6 seconds
+    const forceStopTimer = setTimeout(() => setLoading(false), 6000);
 
     return () => {
       unsub();
@@ -64,8 +68,24 @@ export default function PublicSite({ slug }: { slug: string }) {
     } catch (e) { alert("Error deleting."); }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0d1117]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div></div>;
-  if (!siteData) return <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa]"><h1 className="text-2xl font-bold mb-2">404 - Site Not Found</h1><p className="text-gray-500 text-sm">This site might still be saving in the database.</p></div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0d1117]">
+        <Loader2 className="animate-spin text-purple-500 mb-4" size={40} />
+        <p className="text-gray-400 text-sm">Loading Website...</p>
+      </div>
+    );
+  }
+
+  if (!siteData) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa] text-gray-800">
+        <h1 className="text-2xl font-bold mb-2">404 - Site Not Found</h1>
+        <p className="text-sm text-gray-500 mb-4">This site might still be saving in the database.</p>
+        <a href="/" className="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold text-sm">Go to Dashboard</a>
+      </div>
+    );
+  }
 
   const theme = siteData.themeType || 'white';
   const isNeon = theme === 'neon';
