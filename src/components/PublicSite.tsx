@@ -18,7 +18,6 @@ export default function PublicSite({ slug }: { slug: string }) {
   const [newProdLink, setNewProdLink] = useState('');
 
   useEffect(() => {
-    // 🚀 Clean the slug just in case it has spaces or encoded chars
     const cleanSlug = decodeURIComponent(slug).trim();
     
     if (!cleanSlug) {
@@ -26,20 +25,28 @@ export default function PublicSite({ slug }: { slug: string }) {
       return;
     }
 
+    // 1. Check Local Storage First (Instant Load)
+    const localData = localStorage.getItem('my_last_site_data');
+    if (localData) {
+      const parsed = JSON.parse(localData);
+      if (parsed.slug === cleanSlug) {
+        setSiteData(parsed);
+        setLoading(false);
+      }
+    }
+
+    // 2. Fetch from Firebase (If it exists, update)
     const q = query(collection(db, "ai_sites"), where("slug", "==", cleanSlug));
     const unsub = onSnapshot(q, (snap) => {
       if (!snap.empty) {
         setSiteData(snap.docs[0].data());
         setSiteDocId(snap.docs[0].id);
         setLoading(false); 
-      } else {
-        // If empty, wait 2 seconds before showing 404 (in case it's still saving)
-        setTimeout(() => setLoading(false), 2000);
       }
     });
 
-    // Force stop after 6 seconds
-    const forceStopTimer = setTimeout(() => setLoading(false), 6000);
+    // 3. Force stop loading after 3 seconds
+    const forceStopTimer = setTimeout(() => setLoading(false), 3000);
 
     return () => {
       unsub();
@@ -53,19 +60,35 @@ export default function PublicSite({ slug }: { slug: string }) {
     const newProduct = { name: newProdName, price: newProdPrice, link: newProdLink || "#" };
     const updatedProducts = [...(siteData.products || []), newProduct];
 
-    try {
-      await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
-      setNewProdName(''); setNewProdPrice(''); setNewProdLink('');
-      alert("Product Added to your Website!");
-    } catch (e) { alert("Error adding product."); }
+    // Update Local
+    const updatedSite = { ...siteData, products: updatedProducts };
+    setSiteData(updatedSite);
+    localStorage.setItem('my_last_site_data', JSON.stringify(updatedSite));
+
+    // Update DB
+    if (siteDocId) {
+      try {
+        await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
+      } catch(e) { console.log(e); }
+    }
+
+    setNewProdName(''); setNewProdPrice(''); setNewProdLink('');
+    alert("Product Added!");
   };
 
   const handleDeleteProduct = async (index: number) => {
     if(!window.confirm("Delete this product?")) return;
     const updatedProducts = siteData.products.filter((_: any, i: number) => i !== index);
-    try {
-      await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
-    } catch (e) { alert("Error deleting."); }
+    
+    const updatedSite = { ...siteData, products: updatedProducts };
+    setSiteData(updatedSite);
+    localStorage.setItem('my_last_site_data', JSON.stringify(updatedSite));
+
+    if (siteDocId) {
+      try {
+        await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
+      } catch (e) { console.log(e); }
+    }
   };
 
   if (loading) {
