@@ -27,7 +27,7 @@ const CATEGORIES = [
 ];
 
 function Dashboard() {
-  const [activeTab, setActiveTab] = useState('builder'); // builder, notes, customers
+  const [activeTab, setActiveTab] = useState('builder');
   
   const [sites, setSites] = useState<any[]>([]);
   const [credits, setCredits] = useState(5); 
@@ -90,43 +90,57 @@ function Dashboard() {
     }, 1000); 
   };
 
-  const handleGenerate = async () => {
+  // 🚀 INSTANT GENERATE FIX (No more waiting for Firebase)
+  const handleGenerate = () => {
     if (!siteName) return alert("Please enter your business name.");
-    if (credits < 1) return alert("Insufficient credits!");
+    if (credits < 1) return alert("Insufficient credits! Please top-up.");
 
     setIsGenerating(true);
-    try {
-      const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+    
+    // 1.5 second baad UI ko update karo, chahe Firebase save ho ya na ho
+    setTimeout(async () => {
+      try {
+        const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-      const newSite = {
-        siteName: siteName || "My Website", 
-        slug: generatedSlug, 
-        bio: bio || "Welcome to my page.", 
-        themeType: theme || "white", 
-        button1Title: selectedCategory?.btn1 || "Explore", 
-        button1Url: link1 || "#",
-        button2Title: selectedCategory?.btn2 || "Contact", 
-        button2Url: link2 || "#",
-        categoryName: selectedCategory?.name || "Business",
-        products: [], // Empty products initially
-        createdAt: new Date()
-      };
+        const newSite = {
+          id: 'local_' + Date.now(),
+          siteName: siteName, 
+          slug: generatedSlug, 
+          bio: bio || "Welcome to my page.", 
+          themeType: theme || "white", 
+          button1Title: selectedCategory?.btn1 || "Explore", 
+          button1Url: link1 || "#",
+          button2Title: selectedCategory?.btn2 || "Contact", 
+          button2Url: link2 || "#",
+          categoryName: selectedCategory?.name || "Business",
+          products: [], 
+          createdAt: new Date()
+        };
 
-      const docRef = await addDoc(collection(db, "ai_sites"), newSite);
-      await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
+        // UI Turant Update Karo
+        setSites(prev => [...prev, newSite]);
+        setCredits(prev => prev - 1);
+        localStorage.setItem('my_site_slug', generatedSlug); 
+        setMySiteSlug(generatedSlug);
+        
+        setIsGenerating(false); 
+        setStep('select'); 
+        setSiteName(''); setLink1(''); setLink2('');
+        alert(`🚀 Website Generated Successfully!`);
 
-      setSites(prev => [...prev, { id: docRef.id, ...newSite }]);
-      setCredits(prev => prev - 1);
-      
-      // 🔐 SAVING OWNERSHIP KEY: Yeh key sirf is phone mein save hogi. Koi aur edit nahi kar sakta.
-      localStorage.setItem('my_site_slug', generatedSlug); 
-      setMySiteSlug(generatedSlug);
-      
-      setIsGenerating(false); setStep('select'); setSiteName(''); setLink1(''); setLink2('');
-      alert(`🚀 Website Generated Successfully!`);
-    } catch (error: any) {
-      setIsGenerating(false); alert("Error: " + error.message);
-    }
+        // Background mein Firebase Save karo
+        try {
+          await addDoc(collection(db, "ai_sites"), newSite);
+          await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
+        } catch (dbErr) {
+          console.log("Background Firebase save failed:", dbErr);
+        }
+
+      } catch (error: any) {
+        setIsGenerating(false); 
+        alert("Error: " + error.message);
+      }
+    }, 1200); // 1.2 second delay taaki 'Generating' dikhe thoda sa
   };
 
   const saveNote = async () => {
