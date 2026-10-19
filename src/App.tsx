@@ -20,7 +20,6 @@ function Dashboard() {
   const [prompt, setPrompt] = useState('');
   const [copied, setCopied] = useState(false);
   
-  // Ab ID ki jagah Slug use kar rahe hain (URL ke liye)
   const [mySiteSlug, setMySiteSlug] = useState<string | null>(localStorage.getItem('my_site_slug'));
 
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
@@ -72,7 +71,6 @@ function Dashboard() {
     }, 1000); 
   };
 
-  // 🧠 BINA AI WALA SUPER FAST LOGIC (Ab Database par nahi atkega) 🧠
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     if (!prompt) return alert("Please describe your website idea.");
@@ -102,10 +100,7 @@ function Dashboard() {
 
       const generatedSlug = siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
-      // 1. Fake Delay for UI (1.5 second)
       setTimeout(async () => {
-        
-        // Naya Site Object banaya
         const newSite = {
           id: 'local_' + Date.now(),
           siteName: siteName, 
@@ -118,17 +113,15 @@ function Dashboard() {
           createdAt: new Date()
         };
 
-        // 2. Direct UI par dikhaya aur Credits minus kiye
         setSites(prev => [...prev, newSite]);
         setCredits(prev => prev - 1);
         setPrompt('');
         localStorage.setItem('my_site_slug', generatedSlug);
         setMySiteSlug(generatedSlug);
         
-        setIsGenerating(false); // Building spinner band
+        setIsGenerating(false); 
         alert(`🚀 Website Generated Successfully!`);
 
-        // 3. Background mein Firebase save karna (Agar fail bhi ho toh website dikhegi)
         try {
           await addDoc(collection(db, "ai_sites"), {
             siteName, slug: generatedSlug, prompt, bio, themeType, hasYoutube, hasDiscord, createdAt: new Date()
@@ -139,7 +132,7 @@ function Dashboard() {
           console.log("Firebase Background Save Failed:", dbError);
         }
 
-      }, 1500); 
+      }, 1000); 
       
     } catch (error: any) {
       console.error(error);
@@ -213,7 +206,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Website Show Hone Wala Section */}
         {mySiteSlug && !isGenerating && sites.filter(s => s.slug === mySiteSlug).map(site => (
           <div key={site.id}>
             <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2"><Globe size={16} className="text-purple-600"/> YOUR LIVE WEBSITE</h3>
