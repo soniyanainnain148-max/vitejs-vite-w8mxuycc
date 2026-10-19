@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Globe, Loader2, Code2, Wallet, Zap, Sparkles, ExternalLink, 
   Copy, Check, X, QrCode, ShieldCheck, Store, Utensils, Dumbbell, 
-  Gamepad2, Stethoscope, Briefcase, ArrowLeft, FileText, Users, Trash2, Plus, Save, LogOut, AlertCircle
+  Gamepad2, Stethoscope, Briefcase, ArrowLeft, FileText, Users, Trash2, Plus, Save, LogOut, Info
 } from 'lucide-react';
 import PublicSite from './components/PublicSite';
 import Auth from './components/Auth';
@@ -29,8 +29,6 @@ function App() {
 
   if (isPublicSite) return <PublicSite slug={siteSlug} />;
   if (isAuthLoading) return <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center"><Loader2 className="animate-spin text-purple-600" size={40} /></div>;
-  
-  // 🚀 Agar user login nahi hai, toh Auth page dikhao
   if (!user) return <Auth />;
 
   return <Dashboard user={user} />;
@@ -50,7 +48,7 @@ function Dashboard({ user }: { user: any }) {
   
   const [sites, setSites] = useState<any[]>([]);
   const [isLoadingSites, setIsLoadingSites] = useState(true);
-  const [credits, setCredits] = useState(0); // 🚀 Default 0
+  const [credits, setCredits] = useState(0); 
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   
@@ -80,7 +78,6 @@ function Dashboard({ user }: { user: any }) {
   const USER_ID = user.uid; 
 
   useEffect(() => {
-    // 🚀 1. Check User Credits & Set to 0 for New Users
     const checkUser = async () => {
       const userRef = doc(db, "users", USER_ID);
       const snap = await getDoc(userRef);
@@ -88,24 +85,16 @@ function Dashboard({ user }: { user: any }) {
       if (snap.exists()) {
         setCredits(snap.data().credits || 0);
       } else {
-        // Naya user: Credits 0 karo
-        await setDoc(userRef, { 
-          credits: 0, 
-          email: user.email,
-          createdAt: new Date()
-        }); 
+        await setDoc(userRef, { credits: 0, email: user.email, createdAt: new Date() }); 
         setCredits(0);
       }
     };
     checkUser();
 
-    // 🚀 2. Fetch ONLY this user's websites
     const unsubSites = onSnapshot(collection(db, "ai_sites"), (snap) => {
       const allSites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // Filter by User ID
       const mySites = allSites.filter((site: any) => site.userId === USER_ID);
       
-      // Sort (Newest first)
       mySites.sort((a: any, b: any) => {
         const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
         const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
@@ -114,22 +103,23 @@ function Dashboard({ user }: { user: any }) {
       
       setSites(mySites);
       setIsLoadingSites(false);
+    }, (error) => {
+      console.error(error);
+      setIsLoadingSites(false);
     });
 
-    // 🚀 3. Fetch ONLY this user's notes
     const unsubNotes = onSnapshot(collection(db, "notes"), (snap) => {
       const allNotes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setNotes(allNotes.filter((n: any) => n.userId === USER_ID));
     });
 
-    // 🚀 4. Fetch ONLY this user's customers
     const unsubCust = onSnapshot(collection(db, "customers"), (snap) => {
       const allCust = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setCustomers(allCust.filter((c: any) => c.userId === USER_ID));
     });
 
     return () => { unsubSites(); unsubNotes(); unsubCust(); }; 
-  }, [USER_ID]);
+  }, [USER_ID, user.email]);
 
   const handleLogout = () => {
     if(window.confirm("Are you sure you want to logout?")) signOut(auth);
@@ -152,7 +142,6 @@ function Dashboard({ user }: { user: any }) {
 
   const handleGenerate = async () => {
     if (!siteName) return alert("Please enter your business name.");
-    // 🚀 Check Credits
     if (credits < 1) return alert("Aapke paas credits nahi hain! Please top-up first.");
 
     setIsGenerating(true);
@@ -175,20 +164,16 @@ function Dashboard({ user }: { user: any }) {
         createdAt: new Date()
       };
 
-      // Save to Firebase
       const docRef = await addDoc(collection(db, "ai_sites"), newSite);
-      
-      // Deduct Credits
       await updateDoc(doc(db, "users", USER_ID), { credits: credits - 1 });
       
-      // Update UI locally
       setSites(prev => [{ id: docRef.id, ...newSite }, ...prev]);
-
       setCredits(prev => prev - 1);
+
       setIsGenerating(false); 
       setStep('select'); 
       setSiteName(''); setLink1(''); setLink2('');
-      alert(`🚀 Website Generated Successfully!`);
+      alert(`🚀 Website Generated Successfully! Scroll down to see your websites.`);
 
     } catch (error: any) {
       setIsGenerating(false); 
@@ -272,7 +257,7 @@ function Dashboard({ user }: { user: any }) {
                   ))}
                 </div>
 
-                {/* 🚀 WEBSITE HISTORY LIST */}
+                {/* WEBSITE HISTORY */}
                 <div className="mt-12 border-t border-gray-200 pt-8">
                   <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-6"><Globe size={20} className="text-purple-600"/> My Websites ({sites.length})</h2>
                   
@@ -283,7 +268,7 @@ function Dashboard({ user }: { user: any }) {
                     </div>
                   ) : sites.length === 0 ? (
                     <div className="text-sm text-gray-500 bg-white p-6 rounded-xl border border-gray-200 text-center flex flex-col items-center justify-center">
-                      <AlertCircle size={32} className="text-gray-300 mb-2" />
+                      <Info size={32} className="text-gray-300 mb-2" />
                       <p>No websites found in history.</p>
                       <p className="text-xs mt-2 text-gray-400">Generate a new website above to see it here.</p>
                     </div>
@@ -352,7 +337,7 @@ function Dashboard({ user }: { user: any }) {
           </>
         )}
 
-        {/* NOTES & CUSTOMERS */}
+        {/* NOTES */}
         {activeTab === 'notes' && (
           <div className="animate-fade-in">
              <h1 className="text-3xl font-extrabold text-gray-900 mb-6">My Notes</h1>
@@ -373,6 +358,7 @@ function Dashboard({ user }: { user: any }) {
           </div>
         )}
 
+        {/* CUSTOMERS */}
         {activeTab === 'customers' && (
           <div className="animate-fade-in">
              <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Customer CRM</h1>
