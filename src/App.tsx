@@ -10,6 +10,9 @@ import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
 
+// 🚨 YAHAN APNA ADMIN EMAIL DAALEIN (Wahi email jisse aap admin account banaenge)
+const ADMIN_EMAIL = "soniyanainnain148@gmail.com"; 
+
 function App() {
   const [user, setUser] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -51,7 +54,9 @@ function Dashboard({ user }: { user: any }) {
   const [isLoadingSites, setIsLoadingSites] = useState(true);
   const [credits, setCredits] = useState(0); 
   const [username, setUsername] = useState("Loading...");
-  const [isAdmin, setIsAdmin] = useState(false);
+  
+  // 🚀 SECURE ADMIN CHECK (Email match hona zaroori hai)
+  const isAdmin = user.email === ADMIN_EMAIL;
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -90,9 +95,7 @@ function Dashboard({ user }: { user: any }) {
       
       if (snap.exists()) {
         setCredits(snap.data().credits || 0);
-        const uName = snap.data().username || "User";
-        setUsername(uName);
-        if (uName.toLowerCase() === 'admin') setIsAdmin(true); // 🚀 Admin Check
+        setUsername(snap.data().username || "User");
       }
     };
     checkUser();
@@ -100,7 +103,6 @@ function Dashboard({ user }: { user: any }) {
     const unsubSites = onSnapshot(collection(db, "ai_sites"), (snap) => {
       const allSites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
-      // User ki apni websites
       const mySites = allSites.filter((site: any) => site.userId === USER_ID);
       mySites.sort((a: any, b: any) => {
         const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
@@ -110,7 +112,6 @@ function Dashboard({ user }: { user: any }) {
       setSites(mySites);
       setIsLoadingSites(false);
 
-      // Admin ke liye sab websites
       setAllSitesForAdmin(allSites);
     });
 
@@ -249,7 +250,7 @@ function Dashboard({ user }: { user: any }) {
             <button onClick={() => setActiveTab('builder')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'builder' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><Sparkles size={18} /> Site Builder</button>
             <button onClick={() => setActiveTab('customers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'customers' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><Users size={18} /> Customers</button>
             
-            {/* 🚀 ADMIN TAB */}
+            {/* 🚀 ADMIN TAB (Only visible if email matches) */}
             {isAdmin && (
               <button onClick={() => setActiveTab('admin')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'admin' ? 'bg-red-50 text-red-600 border border-red-100' : 'text-gray-500 hover:bg-gray-50'}`}><Settings size={18} /> Admin Panel</button>
             )}
