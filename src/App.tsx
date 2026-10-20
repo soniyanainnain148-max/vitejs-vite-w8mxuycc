@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Globe, Loader2, Code2, Wallet, Zap, Sparkles, ExternalLink, 
   Copy, Check, X, QrCode, ShieldCheck, Store, Utensils, Dumbbell, 
-  Gamepad2, Stethoscope, Briefcase, ArrowLeft, Users, Trash2, Plus, Save, LogOut, Info, Settings, Send
+  Gamepad2, Stethoscope, Briefcase, ArrowLeft, Users, Trash2, Plus, Save, LogOut, Info, Settings, Send, Megaphone
 } from 'lucide-react';
 import PublicSite from './components/PublicSite';
 import Auth from './components/Auth';
@@ -10,8 +10,8 @@ import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
 
-// 🚨 YAHAN APNA ADMIN EMAIL DAALEIN (Wahi email jisse aap admin account banaenge)
-const ADMIN_EMAIL = "soniyanainnain148@gmail.com"; 
+// 🚨 YAHAN APNA ADMIN EMAIL DAALEIN
+const ADMIN_EMAIL = "arpit_ka_email@gmail.com"; 
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -55,9 +55,12 @@ function Dashboard({ user }: { user: any }) {
   const [credits, setCredits] = useState(0); 
   const [username, setUsername] = useState("Loading...");
   
-  // 🚀 SECURE ADMIN CHECK (Email match hona zaroori hai)
   const isAdmin = user.email === ADMIN_EMAIL;
   
+  // 🚀 GLOBAL NOTE STATE
+  const [globalNote, setGlobalNote] = useState("");
+  const [newGlobalNoteInput, setNewGlobalNoteInput] = useState("");
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   
@@ -100,6 +103,15 @@ function Dashboard({ user }: { user: any }) {
     };
     checkUser();
 
+    // 🚀 FETCH GLOBAL NOTE
+    const unsubNote = onSnapshot(doc(db, "settings", "global_note"), (docSnap) => {
+      if (docSnap.exists()) {
+        const noteText = docSnap.data().text || "";
+        setGlobalNote(noteText);
+        setNewGlobalNoteInput(noteText); // Pre-fill for admin
+      }
+    });
+
     const unsubSites = onSnapshot(collection(db, "ai_sites"), (snap) => {
       const allSites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
@@ -120,7 +132,7 @@ function Dashboard({ user }: { user: any }) {
       setCustomers(allCust.filter((c: any) => c.userId === USER_ID));
     });
 
-    return () => { unsubSites(); unsubCust(); }; 
+    return () => { unsubNote(); unsubSites(); unsubCust(); }; 
   }, [USER_ID]);
 
   const handleLogout = () => {
@@ -163,7 +175,17 @@ function Dashboard({ user }: { user: any }) {
     }
   };
 
-  // 🚀 ADMIN FUNCTION: Set Note on Website
+  // 🚀 ADMIN FUNCTION: Publish Global Note
+  const handlePublishGlobalNote = async () => {
+    try {
+      await setDoc(doc(db, "settings", "global_note"), { text: newGlobalNoteInput });
+      alert("✅ Global Note Published to all users!");
+    } catch (e) {
+      alert("Error publishing note.");
+    }
+  };
+
+  // 🚀 ADMIN FUNCTION: Set Note on Specific Website
   const handleSetAdminNote = async () => {
     if (!selectedSiteForNote) return alert("Select a website first!");
     try {
@@ -250,7 +272,7 @@ function Dashboard({ user }: { user: any }) {
             <button onClick={() => setActiveTab('builder')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'builder' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><Sparkles size={18} /> Site Builder</button>
             <button onClick={() => setActiveTab('customers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'customers' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><Users size={18} /> Customers</button>
             
-            {/* 🚀 ADMIN TAB (Only visible if email matches) */}
+            {/* 🚀 ADMIN TAB */}
             {isAdmin && (
               <button onClick={() => setActiveTab('admin')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'admin' ? 'bg-red-50 text-red-600 border border-red-100' : 'text-gray-500 hover:bg-gray-50'}`}><Settings size={18} /> Admin Panel</button>
             )}
@@ -272,10 +294,36 @@ function Dashboard({ user }: { user: any }) {
       {/* MAIN CONTENT */}
       <div className="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full h-screen overflow-y-auto">
         
+        {/* 🚀 GLOBAL ANNOUNCEMENT FOR ALL USERS */}
+        {globalNote && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 mb-8 rounded-r-xl shadow-sm flex items-start gap-3 animate-fade-in">
+            <Megaphone size={20} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="font-bold text-sm">Admin Announcement</p>
+              <p className="text-sm">{globalNote}</p>
+            </div>
+          </div>
+        )}
+
         {/* 🚀 ADMIN PANEL */}
         {activeTab === 'admin' && isAdmin && (
           <div className="animate-fade-in space-y-8">
             <h1 className="text-3xl font-extrabold text-red-600">Admin Control Panel</h1>
+
+            {/* Global Note */}
+            <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Megaphone size={18} className="text-red-500"/> Broadcast Note to All Users</h2>
+              <div className="space-y-4">
+                <textarea 
+                  placeholder="Type an announcement for all users (e.g., Server maintenance at 10 PM, or Special offer!)..." 
+                  value={newGlobalNoteInput} 
+                  onChange={e => setNewGlobalNoteInput(e.target.value)} 
+                  className="w-full border rounded-xl p-3 text-sm focus:outline-none focus:border-red-500" 
+                  rows={3}
+                ></textarea>
+                <button onClick={handlePublishGlobalNote} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Publish to All Accounts</button>
+              </div>
+            </div>
 
             {/* Send Credits */}
             <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
@@ -287,9 +335,9 @@ function Dashboard({ user }: { user: any }) {
               </div>
             </div>
 
-            {/* Add Note to Website */}
+            {/* Add Note to Specific Website */}
             <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Info size={18} className="text-red-500"/> Put Admin Note on Any Website</h2>
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Info size={18} className="text-red-500"/> Put Note on Any Website</h2>
               <div className="space-y-4">
                 <select 
                   className="w-full border rounded-xl p-3 text-sm focus:outline-none"
@@ -308,13 +356,13 @@ function Dashboard({ user }: { user: any }) {
                 {selectedSiteForNote && (
                   <>
                     <textarea 
-                      placeholder="Write an official notice for this website..." 
+                      placeholder="Write an official notice for this specific website..." 
                       value={adminNoteText} 
                       onChange={e => setAdminNoteText(e.target.value)} 
                       className="w-full border rounded-xl p-3 text-sm focus:outline-none" 
                       rows={3}
                     ></textarea>
-                    <button onClick={handleSetAdminNote} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Publish Note</button>
+                    <button onClick={handleSetAdminNote} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Publish Note to Website</button>
                   </>
                 )}
               </div>
