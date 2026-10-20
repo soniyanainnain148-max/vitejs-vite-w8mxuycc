@@ -6,8 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
   ShieldCheck, Zap, Star, Sparkles, ShoppingBag, Settings, X, Plus, 
   Trash2, Save, Loader2, MessageCircle, Image as ImageIcon, UploadCloud, 
-  Check, Camera, UserCircle, Instagram, Youtube, Twitter, Mail, Phone, 
-  MapPin, ArrowRight, Quote
+  Check, Camera, UserCircle, Mail, Phone, MapPin, Quote, Video, Send
 } from 'lucide-react';
 
 export default function PublicSite({ slug }: { slug: string }) {
@@ -108,7 +107,6 @@ export default function PublicSite({ slug }: { slug: string }) {
   const theme = siteData.themeType || 'white';
   const isDark = theme === 'neon' || theme === 'hacker';
 
-  // 🚀 THEME SETTINGS
   const bgClass = theme === 'neon' ? 'bg-[#0b0914]' : theme === 'hacker' ? 'bg-[#050505]' : 'bg-[#f8f9fa]';
   const textMain = isDark ? 'text-white' : 'text-gray-900';
   const textSub = isDark ? 'text-gray-400' : 'text-gray-600';
@@ -120,7 +118,6 @@ export default function PublicSite({ slug }: { slug: string }) {
   return (
     <div className={`min-h-screen ${bgClass} font-sans pb-0 relative overflow-hidden transition-colors duration-500`}>
       
-      {/* Background Glows for Dark Themes */}
       {isDark && (
         <>
           <div className={`fixed top-0 left-1/4 w-96 h-96 ${theme === 'neon' ? 'bg-pink-600' : 'bg-emerald-600'} rounded-full blur-[150px] opacity-20 pointer-events-none`}></div>
@@ -128,14 +125,12 @@ export default function PublicSite({ slug }: { slug: string }) {
         </>
       )}
 
-      {/* 🚀 OWNER GEAR ICON */}
       {isOwner && (
         <button onClick={() => setIsEditOpen(true)} className={`fixed top-6 right-6 z-50 p-3 rounded-full text-white shadow-2xl animate-bounce ${accentColor}`} title="Manage Website">
           <Settings size={26} />
         </button>
       )}
 
-      {/* 🚀 PREMIUM NAVBAR */}
       <nav className={`w-full border-b ${isDark ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-white/80'} backdrop-blur-md sticky top-0 z-40`}>
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className={`flex items-center gap-2 font-extrabold text-xl ${textMain}`}>
@@ -150,7 +145,6 @@ export default function PublicSite({ slug }: { slug: string }) {
         </div>
       </nav>
 
-      {/* 🚀 HERO SECTION */}
       <header className="max-w-6xl mx-auto px-4 pt-16 pb-24 text-center relative z-10" id="about">
         <div className="flex flex-col items-center justify-center mb-8">
           <div className={`w-36 h-36 md:w-48 md:h-48 rounded-full border-4 ${isDark ? 'border-white/20' : 'border-purple-100'} p-2 relative shadow-2xl`}>
@@ -186,7 +180,6 @@ export default function PublicSite({ slug }: { slug: string }) {
           </a>
         </div>
 
-        {/* Stats Bar */}
         <div className={`mt-16 grid grid-cols-3 gap-4 max-w-3xl mx-auto py-6 border-y ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
           <div>
             <h3 className={`text-3xl font-extrabold ${textMain}`}>100+</h3>
@@ -203,7 +196,6 @@ export default function PublicSite({ slug }: { slug: string }) {
         </div>
       </header>
 
-      {/* 🚀 PRODUCTS SECTION */}
       <section className="max-w-6xl mx-auto px-4 py-16 relative z-10" id="products">
         <div className="flex justify-between items-end mb-10">
           <div>
@@ -252,7 +244,6 @@ export default function PublicSite({ slug }: { slug: string }) {
         )}
       </section>
 
-      {/* 🚀 TESTIMONIALS SECTION (Trust Building) */}
       <section className={`py-20 ${isDark ? 'bg-black/30' : 'bg-purple-50/50'}`}>
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-12">
@@ -285,12 +276,10 @@ export default function PublicSite({ slug }: { slug: string }) {
         </div>
       </section>
 
-      {/* 🚀 FOOTER */}
       <footer className={`pt-16 pb-8 border-t ${isDark ? 'border-white/10 bg-[#050505]' : 'border-gray-200 bg-white'}`}>
         <div className="max-w-6xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
             
-            {/* Brand */}
             <div className="md:col-span-2">
               <div className={`flex items-center gap-2 font-extrabold text-2xl mb-4 ${textMain}`}>
                 <div className={`p-2 rounded-xl ${accentColor}`}><Sparkles size={20} className="text-white" /></div>
@@ -300,13 +289,13 @@ export default function PublicSite({ slug }: { slug: string }) {
                 Your one-stop destination for premium quality {siteData.categoryName.toLowerCase()} products. We ensure 100% satisfaction and fast delivery.
               </p>
               <div className="flex gap-4">
-                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-purple-600 hover:border-purple-600'} transition`}><Instagram size={18}/></a>
-                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-red-600 hover:border-red-600'} transition`}><Youtube size={18}/></a>
-                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-blue-500 hover:border-blue-500'} transition`}><Twitter size={18}/></a>
+                {/* 🚀 FIXED SOCIAL ICONS */}
+                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-purple-600 hover:border-purple-600'} transition`}><Camera size={18}/></a>
+                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-red-600 hover:border-red-600'} transition`}><Video size={18}/></a>
+                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-blue-500 hover:border-blue-500'} transition`}><Send size={18}/></a>
               </div>
             </div>
 
-            {/* Quick Links */}
             <div>
               <h4 className={`font-bold mb-4 ${textMain}`}>Quick Links</h4>
               <ul className={`space-y-2 text-sm ${textSub}`}>
@@ -317,7 +306,6 @@ export default function PublicSite({ slug }: { slug: string }) {
               </ul>
             </div>
 
-            {/* Contact */}
             <div>
               <h4 className={`font-bold mb-4 ${textMain}`}>Get in Touch</h4>
               <ul className={`space-y-3 text-sm ${textSub}`}>
@@ -335,7 +323,6 @@ export default function PublicSite({ slug }: { slug: string }) {
         </div>
       </footer>
 
-      {/* 🚀 OWNER EDIT PANEL (Modal) */}
       {isOwner && isEditOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -343,7 +330,6 @@ export default function PublicSite({ slug }: { slug: string }) {
             <h2 className="text-2xl font-extrabold text-gray-900 mb-1 flex items-center gap-2"><Settings size={24} className="text-purple-600"/> Owner Panel</h2>
             <p className="text-xs text-gray-500 mb-6">Manage your website content and products.</p>
             
-            {/* Avatar Upload */}
             <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100 mb-8">
               <h3 className="text-sm font-bold text-purple-800 mb-4 flex items-center gap-2"><UserCircle size={18}/> Update Profile Avatar</h3>
               <div className="flex items-center gap-4">
@@ -360,7 +346,6 @@ export default function PublicSite({ slug }: { slug: string }) {
               </div>
             </div>
 
-            {/* Add Product */}
             <div className="border-t border-gray-100 pt-6 mb-8">
               <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2"><ShoppingBag size={18} className="text-purple-600"/> Add New Product</h3>
               <div className="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-200">
