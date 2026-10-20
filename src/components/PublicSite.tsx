@@ -3,23 +3,25 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { db, storage, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { ShieldCheck, Zap, Star, Sparkles, ShoppingBag, Settings, X, Plus, Trash2, Save, Loader2, MessageCircle, Image as ImageIcon, UploadCloud, Check, Camera, UserCircle } from 'lucide-react';
+import { 
+  ShieldCheck, Zap, Star, Sparkles, ShoppingBag, Settings, X, Plus, 
+  Trash2, Save, Loader2, MessageCircle, Image as ImageIcon, UploadCloud, 
+  Check, Camera, UserCircle, Instagram, Youtube, Twitter, Mail, Phone, 
+  MapPin, ArrowRight, Quote
+} from 'lucide-react';
 
 export default function PublicSite({ slug }: { slug: string }) {
   const [siteData, setSiteData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [siteDocId, setSiteDocId] = useState<string>('');
-  
   const [isOwner, setIsOwner] = useState(false);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
-  
   const [newProdName, setNewProdName] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('');
   const [newProdLink, setNewProdLink] = useState('');
   const [newProdImage, setNewProdImage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
   useEffect(() => {
@@ -58,10 +60,8 @@ export default function PublicSite({ slug }: { slug: string }) {
       const storageRef = ref(storage, `avatars/${siteData.slug}_${Date.now()}`);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
-      
       await updateDoc(doc(db, "ai_sites", siteDocId), { avatarUrl: downloadURL });
       setSiteData({ ...siteData, avatarUrl: downloadURL });
-      
       alert("✅ Profile Avatar Updated!");
     } catch (error) { alert("❌ Avatar upload failed!"); }
     setIsAvatarUploading(false);
@@ -85,16 +85,10 @@ export default function PublicSite({ slug }: { slug: string }) {
     if (!newProdName || !newProdPrice) return alert("Name aur Price zaroori hai!");
     if (isUploading) return alert("Photo upload ho rahi hai...");
     
-    const newProduct = { 
-      name: newProdName, 
-      price: newProdPrice, 
-      link: newProdLink || "#", 
-      image: newProdImage || "" 
-    };
-    
+    const newProduct = { name: newProdName, price: newProdPrice, link: newProdLink || "#", image: newProdImage || "" };
     const updatedProducts = [...(siteData.products || []), newProduct];
-    setSiteData({ ...siteData, products: updatedProducts });
     
+    setSiteData({ ...siteData, products: updatedProducts });
     if (siteDocId) await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
     
     setNewProdName(''); setNewProdPrice(''); setNewProdLink(''); setNewProdImage('');
@@ -108,85 +102,257 @@ export default function PublicSite({ slug }: { slug: string }) {
     if (siteDocId) await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]"><Loader2 className="animate-spin text-purple-600" size={40} /></div>;
-  if (!siteData) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]"><h1 className="text-2xl font-bold text-gray-800">404 - Site Not Found</h1></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0f111a]"><Loader2 className="animate-spin text-purple-500" size={50} /></div>;
+  if (!siteData) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]"><h1 className="text-3xl font-bold text-gray-800">404 - Site Not Found</h1></div>;
+
+  const theme = siteData.themeType || 'white';
+  const isDark = theme === 'neon' || theme === 'hacker';
+
+  // 🚀 THEME SETTINGS
+  const bgClass = theme === 'neon' ? 'bg-[#0b0914]' : theme === 'hacker' ? 'bg-[#050505]' : 'bg-[#f8f9fa]';
+  const textMain = isDark ? 'text-white' : 'text-gray-900';
+  const textSub = isDark ? 'text-gray-400' : 'text-gray-600';
+  const cardBg = theme === 'neon' ? 'bg-[#150f24]/80 border-pink-500/30 backdrop-blur-xl shadow-[0_0_20px_rgba(236,72,153,0.15)]' : theme === 'hacker' ? 'bg-[#111111]/90 border-emerald-500/30 backdrop-blur-xl shadow-[0_0_20px_rgba(16,185,129,0.15)]' : 'bg-white border-gray-200 shadow-xl';
+  const accentColor = theme === 'neon' ? 'bg-pink-600' : theme === 'hacker' ? 'bg-emerald-600' : 'bg-purple-600';
+  const accentText = theme === 'neon' ? 'text-pink-500' : theme === 'hacker' ? 'text-emerald-500' : 'text-purple-600';
+  const accentGradient = theme === 'neon' ? 'bg-gradient-to-r from-pink-500 to-purple-600' : theme === 'hacker' ? 'bg-gradient-to-r from-emerald-500 to-teal-600' : 'bg-gradient-to-r from-purple-600 to-blue-600';
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] font-sans pb-24 relative">
+    <div className={`min-h-screen ${bgClass} font-sans pb-0 relative overflow-hidden transition-colors duration-500`}>
       
+      {/* Background Glows for Dark Themes */}
+      {isDark && (
+        <>
+          <div className={`fixed top-0 left-1/4 w-96 h-96 ${theme === 'neon' ? 'bg-pink-600' : 'bg-emerald-600'} rounded-full blur-[150px] opacity-20 pointer-events-none`}></div>
+          <div className={`fixed bottom-0 right-1/4 w-96 h-96 ${theme === 'neon' ? 'bg-purple-600' : 'bg-teal-600'} rounded-full blur-[150px] opacity-20 pointer-events-none`}></div>
+        </>
+      )}
+
+      {/* 🚀 OWNER GEAR ICON */}
       {isOwner && (
-        <button onClick={() => setIsEditOpen(true)} className="fixed top-6 right-6 z-50 p-3 bg-purple-600 text-white rounded-full shadow-2xl animate-pulse" title="Manage Website">
-          <Settings size={24} />
+        <button onClick={() => setIsEditOpen(true)} className={`fixed top-6 right-6 z-50 p-3 rounded-full text-white shadow-2xl animate-bounce ${accentColor}`} title="Manage Website">
+          <Settings size={26} />
         </button>
       )}
 
-      <div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
-        <div className="flex justify-between items-center mb-12">
-          <div className="flex items-center gap-2 font-extrabold text-xl text-gray-900"><Sparkles size={16} className="text-purple-600" /> {siteData.siteName}</div>
-        </div>
-
-        <div className="flex flex-col md:flex-row gap-8 items-center mb-16">
-          <div className="relative">
-            <div className="w-40 h-40 md:w-56 md:h-56 rounded-full border-4 border-purple-100 p-2 relative z-10 bg-white shadow-xl">
-              {siteData.avatarUrl ? (
-                <img src={siteData.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
-              ) : (
-                <img src={`https://api.dicebear.com/7.x/bottts/svg?seed=${siteData.slug}`} alt="avatar" className="w-full h-full rounded-full object-cover" />
-              )}
-              <div className="absolute bottom-2 right-2 bg-purple-600 text-white p-2 rounded-full border-2 border-white"><ShieldCheck size={24} /></div>
-            </div>
+      {/* 🚀 PREMIUM NAVBAR */}
+      <nav className={`w-full border-b ${isDark ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-white/80'} backdrop-blur-md sticky top-0 z-40`}>
+        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className={`flex items-center gap-2 font-extrabold text-xl ${textMain}`}>
+            <div className={`p-1.5 rounded-lg ${accentColor}`}><Sparkles size={18} className="text-white" /></div>
+            {siteData.siteName}
           </div>
-
-          <div className="flex-1 text-center md:text-left">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-purple-600 text-white mb-4"><Zap size={12} className="inline mr-1"/> PRO {siteData.categoryName}</span>
-            <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 mb-4 capitalize">{siteData.siteName}</h1>
-            <p className="text-base md:text-lg mb-8 max-w-lg mx-auto md:mx-0 text-gray-500">{siteData.bio}</p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-              <a href={siteData.button1Url || "#"} className="px-8 py-4 rounded-xl font-bold text-white bg-purple-600 shadow-xl">{siteData.button1Title || "Explore Now"}</a>
-              <a href={siteData.button2Url || "#"} className="px-8 py-4 rounded-xl font-bold border-2 border-gray-300 text-gray-800">{siteData.button2Title || "Contact Us"}</a>
-            </div>
+          <div className="flex items-center gap-4">
+            <a href="#products" className={`text-sm font-bold ${textSub} hover:${textMain}`}>Products</a>
+            <a href="#about" className={`text-sm font-bold ${textSub} hover:${textMain}`}>About</a>
+            <a href={`https://wa.me/`} target="_blank" className={`px-4 py-2 rounded-lg text-xs font-bold text-white shadow-lg ${accentGradient}`}>Contact Us</a>
           </div>
         </div>
+      </nav>
 
-        {siteData.products && siteData.products.length > 0 && (
-          <div className="mb-16">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-gray-900"><ShoppingBag className="text-purple-600"/> Featured Products</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {siteData.products.map((prod: any, idx: number) => (
-                <div key={idx} className="bg-white rounded-xl border border-gray-200 hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col overflow-hidden group">
-                  <div className="w-full aspect-square bg-gray-50 relative p-4">
-                    {prod.image ? <img src={prod.image} alt={prod.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={50}/></div>}
-                    
-                    {isOwner && <button onClick={() => handleDeleteProduct(idx)} className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition shadow-lg z-20"><Trash2 size={16} /></button>}
+      {/* 🚀 HERO SECTION */}
+      <header className="max-w-6xl mx-auto px-4 pt-16 pb-24 text-center relative z-10" id="about">
+        <div className="flex flex-col items-center justify-center mb-8">
+          <div className={`w-36 h-36 md:w-48 md:h-48 rounded-full border-4 ${isDark ? 'border-white/20' : 'border-purple-100'} p-2 relative shadow-2xl`}>
+            {siteData.avatarUrl ? (
+              <img src={siteData.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <img src={`https://api.dicebear.com/7.x/bottts/svg?seed=${siteData.slug}`} alt="avatar" className="w-full h-full rounded-full object-cover" />
+            )}
+            <div className={`absolute bottom-2 right-2 p-2 rounded-full border-2 ${isDark ? 'border-[#050505]' : 'border-white'} text-white shadow-lg ${accentColor}`}>
+              <ShieldCheck size={28} />
+            </div>
+          </div>
+        </div>
+        
+        <span className={`inline-flex items-center gap-1 px-4 py-1.5 rounded-full text-xs font-bold text-white mb-6 shadow-md ${accentGradient}`}>
+          <Zap size={14} /> OFFICIAL {siteData.categoryName} STORE
+        </span>
+        
+        <h1 className={`text-5xl md:text-7xl font-extrabold tracking-tight mb-6 ${textMain}`}>
+          Welcome to <br className="md:hidden"/> <span className={`text-transparent bg-clip-text ${accentGradient}`}>{siteData.siteName}</span>
+        </h1>
+        
+        <p className={`text-lg md:text-xl max-w-2xl mx-auto mb-10 ${textSub}`}>
+          {siteData.bio}
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="#products" className={`px-8 py-4 rounded-xl font-bold text-white shadow-xl hover:scale-105 transition-transform flex items-center justify-center gap-2 ${accentGradient}`}>
+            <ShoppingBag size={20} /> Explore Products
+          </a>
+          <a href={`https://wa.me/`} target="_blank" className={`px-8 py-4 rounded-xl font-bold border-2 flex items-center justify-center gap-2 transition ${isDark ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-800 hover:bg-gray-100'}`}>
+            <MessageCircle size={20} /> Chat With Owner
+          </a>
+        </div>
+
+        {/* Stats Bar */}
+        <div className={`mt-16 grid grid-cols-3 gap-4 max-w-3xl mx-auto py-6 border-y ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+          <div>
+            <h3 className={`text-3xl font-extrabold ${textMain}`}>100+</h3>
+            <p className={`text-xs font-bold uppercase mt-1 ${textSub}`}>Happy Buyers</p>
+          </div>
+          <div>
+            <h3 className={`text-3xl font-extrabold ${textMain}`}>100%</h3>
+            <p className={`text-xs font-bold uppercase mt-1 ${textSub}`}>Trusted</p>
+          </div>
+          <div>
+            <h3 className={`text-3xl font-extrabold ${textMain}`}>4.9<span className="text-yellow-500 text-xl">★</span></h3>
+            <p className={`text-xs font-bold uppercase mt-1 ${textSub}`}>Rating</p>
+          </div>
+        </div>
+      </header>
+
+      {/* 🚀 PRODUCTS SECTION */}
+      <section className="max-w-6xl mx-auto px-4 py-16 relative z-10" id="products">
+        <div className="flex justify-between items-end mb-10">
+          <div>
+            <h2 className={`text-3xl md:text-4xl font-extrabold flex items-center gap-3 ${textMain}`}>
+              <ShoppingBag size={32} className={accentText} /> Featured Products
+            </h2>
+            <p className={`mt-2 ${textSub}`}>Check out our latest collections.</p>
+          </div>
+        </div>
+
+        {siteData.products && siteData.products.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {siteData.products.map((prod: any, idx: number) => (
+              <div key={idx} className={`rounded-2xl border transition-all duration-300 hover:-translate-y-2 flex flex-col overflow-hidden group ${cardBg}`}>
+                <div className={`w-full aspect-square relative p-6 ${isDark ? 'bg-black/50' : 'bg-gray-50'}`}>
+                  {prod.image ? (
+                    <img src={prod.image} alt={prod.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center opacity-30"><ImageIcon size={60} className={textMain}/></div>
+                  )}
+                  <div className={`absolute top-4 left-4 px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wider text-white shadow-md ${accentColor}`}>
+                    New Arrival
                   </div>
-                  <div className="p-5 flex flex-col flex-grow">
-                    <h3 className="font-semibold text-base mb-1 line-clamp-1 text-gray-800">{prod.name}</h3>
-                    <p className="text-2xl font-bold mb-4 text-gray-900">₹{prod.price}</p>
-                    <a href={prod.link || "#"} target="_blank" rel="noreferrer" className="mt-auto w-full py-3 rounded-lg font-bold text-white bg-green-500 hover:bg-green-600 flex items-center justify-center gap-2"><MessageCircle size={18}/> Chat to Buy</a>
-                  </div>
+                  {isOwner && (
+                    <button onClick={() => handleDeleteProduct(idx)} className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition shadow-lg z-20" title="Delete Product">
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
-              ))}
-            </div>
+                <div className="p-6 flex flex-col flex-grow">
+                  <h3 className={`font-bold text-lg mb-2 line-clamp-1 ${textMain}`}>{prod.name}</h3>
+                  <p className={`text-3xl font-extrabold mb-6 ${accentText}`}>₹{prod.price}</p>
+                  <a href={prod.link || "#"} target="_blank" rel="noreferrer" className={`mt-auto w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-lg transition-transform hover:scale-105 ${accentGradient}`}>
+                    <MessageCircle size={18}/> Buy Now
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={`text-center py-20 rounded-2xl border-2 border-dashed ${isDark ? 'border-white/10' : 'border-gray-300'}`}>
+            <ShoppingBag size={48} className={`mx-auto mb-4 opacity-50 ${textSub}`} />
+            <h3 className={`text-xl font-bold ${textMain}`}>No Products Added Yet</h3>
+            <p className={`mt-2 ${textSub}`}>Products added by the owner will appear here.</p>
           </div>
         )}
-      </div>
+      </section>
 
+      {/* 🚀 TESTIMONIALS SECTION (Trust Building) */}
+      <section className={`py-20 ${isDark ? 'bg-black/30' : 'bg-purple-50/50'}`}>
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className={`text-3xl md:text-4xl font-extrabold mb-4 ${textMain}`}>What Our Customers Say</h2>
+            <p className={textSub}>Real reviews from real buyers.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className={`p-6 rounded-2xl border relative ${cardBg}`}>
+                <Quote size={40} className={`absolute top-4 right-4 opacity-10 ${accentText}`} />
+                <div className="flex gap-1 mb-4 text-yellow-500">
+                  <Star size={16} fill="currentColor" /> <Star size={16} fill="currentColor" /> <Star size={16} fill="currentColor" /> <Star size={16} fill="currentColor" /> <Star size={16} fill="currentColor" />
+                </div>
+                <p className={`text-sm leading-relaxed mb-6 ${textSub}`}>
+                  "Bhai bahut hi badhiya service hai. Product bilkul waisa hi mila jaisa dikhaya gaya tha. Delivery bhi super fast thi. Highly recommended!"
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${accentColor}`}>
+                    U{item}
+                  </div>
+                  <div>
+                    <h4 className={`text-sm font-bold ${textMain}`}>Verified Buyer {item}</h4>
+                    <p className={`text-[10px] ${textSub}`}>2 days ago</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 🚀 FOOTER */}
+      <footer className={`pt-16 pb-8 border-t ${isDark ? 'border-white/10 bg-[#050505]' : 'border-gray-200 bg-white'}`}>
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+            
+            {/* Brand */}
+            <div className="md:col-span-2">
+              <div className={`flex items-center gap-2 font-extrabold text-2xl mb-4 ${textMain}`}>
+                <div className={`p-2 rounded-xl ${accentColor}`}><Sparkles size={20} className="text-white" /></div>
+                {siteData.siteName}
+              </div>
+              <p className={`text-sm max-w-sm mb-6 ${textSub}`}>
+                Your one-stop destination for premium quality {siteData.categoryName.toLowerCase()} products. We ensure 100% satisfaction and fast delivery.
+              </p>
+              <div className="flex gap-4">
+                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-purple-600 hover:border-purple-600'} transition`}><Instagram size={18}/></a>
+                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-red-600 hover:border-red-600'} transition`}><Youtube size={18}/></a>
+                <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-blue-500 hover:border-blue-500'} transition`}><Twitter size={18}/></a>
+              </div>
+            </div>
+
+            {/* Quick Links */}
+            <div>
+              <h4 className={`font-bold mb-4 ${textMain}`}>Quick Links</h4>
+              <ul className={`space-y-2 text-sm ${textSub}`}>
+                <li><a href="#" className="hover:underline">Home</a></li>
+                <li><a href="#products" className="hover:underline">Products</a></li>
+                <li><a href="#about" className="hover:underline">About Us</a></li>
+                <li><a href="#" className="hover:underline">Terms of Service</a></li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4 className={`font-bold mb-4 ${textMain}`}>Get in Touch</h4>
+              <ul className={`space-y-3 text-sm ${textSub}`}>
+                <li className="flex items-center gap-2"><Mail size={16} className={accentText}/> support@webcraft.com</li>
+                <li className="flex items-center gap-2"><Phone size={16} className={accentText}/> +91 98765 43210</li>
+                <li className="flex items-center gap-2"><MapPin size={16} className={accentText}/> India</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className={`pt-8 border-t text-center flex flex-col md:flex-row justify-between items-center gap-4 ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+            <p className={`text-xs ${textSub}`}>© {new Date().getFullYear()} {siteData.siteName}. All rights reserved.</p>
+            <p className={`text-xs flex items-center gap-1 ${textSub}`}>Powered by <span className={`font-bold ${accentText}`}>WebCraft SaaS</span></p>
+          </div>
+        </div>
+      </footer>
+
+      {/* 🚀 OWNER EDIT PANEL (Modal) */}
       {isOwner && isEditOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <button onClick={() => setIsEditOpen(false)} className="absolute top-4 right-4 text-gray-400"><X size={24} /></button>
-            <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2"><Settings size={20} className="text-purple-600"/> Website Manager</h2>
-            <p className="text-xs text-gray-500 mb-6">Apni website customize karein.</p>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setIsEditOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800"><X size={24} /></button>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-1 flex items-center gap-2"><Settings size={24} className="text-purple-600"/> Owner Panel</h2>
+            <p className="text-xs text-gray-500 mb-6">Manage your website content and products.</p>
             
-            <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 mb-6">
-              <h3 className="text-sm font-bold text-purple-800 mb-3 flex items-center gap-2"><UserCircle size={16}/> Update Profile Avatar</h3>
+            {/* Avatar Upload */}
+            <div className="bg-purple-50 p-4 rounded-2xl border border-purple-100 mb-8">
+              <h3 className="text-sm font-bold text-purple-800 mb-4 flex items-center gap-2"><UserCircle size={18}/> Update Profile Avatar</h3>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-white border-2 border-purple-200 overflow-hidden shadow-sm">
+                <div className="w-20 h-20 rounded-full bg-white border-4 border-purple-200 overflow-hidden shadow-md">
                   {siteData.avatarUrl ? <img src={siteData.avatarUrl} className="w-full h-full object-cover" /> : <img src={`https://api.dicebear.com/7.x/bottts/svg?seed=${siteData.slug}`} className="w-full h-full object-cover" />}
                 </div>
                 <div className="relative flex-1">
-                  <button className="w-full bg-white border border-purple-300 text-purple-600 font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2 shadow-sm">
-                    {isAvatarUploading ? <Loader2 className="animate-spin" size={14}/> : <Camera size={14}/>} 
+                  <button className="w-full bg-white border-2 border-purple-300 text-purple-700 font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 shadow-sm transition hover:bg-purple-100">
+                    {isAvatarUploading ? <Loader2 className="animate-spin" size={16}/> : <Camera size={16}/>} 
                     {isAvatarUploading ? 'Uploading...' : 'Upload Photo'}
                   </button>
                   <input type="file" accept="image/*" onChange={handleAvatarUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={isAvatarUploading} />
@@ -194,26 +360,44 @@ export default function PublicSite({ slug }: { slug: string }) {
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4 mb-6">
-              <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2"><ShoppingBag size={16}/> Add New Product</h3>
-              <div className="space-y-4 bg-gray-50 p-5 rounded-xl border border-gray-200">
-                <input type="text" placeholder="Product Name" value={newProdName} onChange={e => setNewProdName(e.target.value)} className="w-full border rounded-lg p-3 text-sm focus:border-purple-500" />
-                <input type="number" placeholder="Price (₹)" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} className="w-full border rounded-lg p-3 text-sm focus:border-purple-500" />
+            {/* Add Product */}
+            <div className="border-t border-gray-100 pt-6 mb-8">
+              <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2"><ShoppingBag size={18} className="text-purple-600"/> Add New Product</h3>
+              <div className="space-y-4 bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 mb-1 block uppercase">Product Name</label>
+                  <input type="text" placeholder="e.g. Premium T-Shirt" value={newProdName} onChange={e => setNewProdName(e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 mb-1 block uppercase">Price (₹)</label>
+                  <input type="number" placeholder="e.g. 499" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200" />
+                </div>
                 
-                <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:bg-gray-100 cursor-pointer">
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={isUploading} />
-                  {isUploading ? <span className="text-gray-600 text-sm font-bold flex justify-center items-center gap-2"><Loader2 className="animate-spin"/> Uploading...</span> : newProdImage ? <span className="text-green-600 text-sm font-bold flex justify-center items-center gap-2"><Check/> Photo Selected</span> : <span className="text-gray-500 text-sm font-bold flex flex-col items-center gap-1"><UploadCloud/> Tap to Upload</span>}
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 mb-1 block uppercase">Product Photo</label>
+                  <div className="relative border-2 border-dashed border-purple-300 rounded-xl p-6 text-center hover:bg-purple-50 cursor-pointer transition">
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={isUploading} />
+                    {isUploading ? <span className="text-purple-600 text-sm font-bold flex justify-center items-center gap-2"><Loader2 className="animate-spin"/> Uploading...</span> : newProdImage ? <span className="text-green-600 text-sm font-bold flex justify-center items-center gap-2"><Check/> Photo Ready</span> : <span className="text-purple-600 text-sm font-bold flex flex-col items-center gap-1"><UploadCloud size={24}/> Tap to Upload</span>}
+                  </div>
                 </div>
 
-                <input type="text" placeholder="Chat Link (WhatsApp)" value={newProdLink} onChange={e => setNewProdLink(e.target.value)} className="w-full border rounded-lg p-3 text-sm focus:border-purple-500" />
-                <button onClick={handleAddProduct} disabled={isUploading} className="w-full bg-purple-600 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 shadow-md"><Plus size={18}/> Add Product</button>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 mb-1 block uppercase">WhatsApp Link (Buy)</label>
+                  <input type="text" placeholder="https://wa.me/91..." value={newProdLink} onChange={e => setNewProdLink(e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200" />
+                </div>
+                
+                <button onClick={handleAddProduct} disabled={isUploading} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 shadow-lg transition mt-2 disabled:opacity-50">
+                  <Plus size={20}/> Add Product to Store
+                </button>
               </div>
             </div>
 
-            <button onClick={() => setIsEditOpen(false)} className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"><Save size={18}/> Done</button>
+            <button onClick={() => setIsEditOpen(false)} className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition">
+              <Save size={20}/> Save & Close
+            </button>
           </div>
         </div>
       )}
     </div>
   );
-}
+                  }
