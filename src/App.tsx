@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Globe, Loader2, Code2, Wallet, Zap, Sparkles, ExternalLink, 
   Copy, Check, X, QrCode, ShieldCheck, Store, Utensils, Dumbbell, 
-  Gamepad2, Stethoscope, Briefcase, ArrowLeft, Users, Trash2, Plus, Save, LogOut, Info, Settings, Send, Megaphone
+  Gamepad2, Stethoscope, Briefcase, ArrowLeft, Users, Trash2, Plus, Save, LogOut, Info, Settings, Send, Megaphone, UserCircle
 } from 'lucide-react';
 import PublicSite from './components/PublicSite';
 import Auth from './components/Auth';
@@ -57,7 +57,7 @@ function Dashboard({ user }: { user: any }) {
   
   const isAdmin = user.email === ADMIN_EMAIL;
   
-  // 🚀 GLOBAL NOTE STATE
+  // GLOBAL NOTE STATE
   const [globalNote, setGlobalNote] = useState("");
   const [newGlobalNoteInput, setNewGlobalNoteInput] = useState("");
 
@@ -103,12 +103,12 @@ function Dashboard({ user }: { user: any }) {
     };
     checkUser();
 
-    // 🚀 FETCH GLOBAL NOTE
+    // FETCH GLOBAL NOTE
     const unsubNote = onSnapshot(doc(db, "settings", "global_note"), (docSnap) => {
       if (docSnap.exists()) {
         const noteText = docSnap.data().text || "";
         setGlobalNote(noteText);
-        setNewGlobalNoteInput(noteText); // Pre-fill for admin
+        setNewGlobalNoteInput(noteText); 
       }
     });
 
@@ -154,7 +154,6 @@ function Dashboard({ user }: { user: any }) {
     }, 1000); 
   };
 
-  // 🚀 ADMIN FUNCTION: Send Credits
   const handleSendCredits = async () => {
     if (!targetUser || !creditAmount) return alert("Username aur Amount daalein!");
     try {
@@ -175,7 +174,6 @@ function Dashboard({ user }: { user: any }) {
     }
   };
 
-  // 🚀 ADMIN FUNCTION: Publish Global Note
   const handlePublishGlobalNote = async () => {
     try {
       await setDoc(doc(db, "settings", "global_note"), { text: newGlobalNoteInput });
@@ -185,7 +183,6 @@ function Dashboard({ user }: { user: any }) {
     }
   };
 
-  // 🚀 ADMIN FUNCTION: Set Note on Specific Website
   const handleSetAdminNote = async () => {
     if (!selectedSiteForNote) return alert("Select a website first!");
     try {
@@ -263,7 +260,7 @@ function Dashboard({ user }: { user: any }) {
           <div className="flex items-center justify-between mb-8 px-2 mt-2">
             <div className="flex items-center gap-2">
               <div className={`p-2 rounded-xl shadow-md ${isAdmin ? 'bg-red-600' : 'bg-purple-600'}`}><Code2 size={20} className="text-white" /></div>
-              <span className="font-extrabold text-lg text-gray-900">WEBCRAFT {isAdmin && <span className="text-red-600">ADMIN</span>}</span>
+              <span className="font-extrabold text-lg text-gray-900">WEBCRAFT</span>
             </div>
             <button onClick={handleLogout} className="text-gray-400 hover:text-red-500" title="Logout"><LogOut size={18} /></button>
           </div>
@@ -272,7 +269,6 @@ function Dashboard({ user }: { user: any }) {
             <button onClick={() => setActiveTab('builder')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'builder' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><Sparkles size={18} /> Site Builder</button>
             <button onClick={() => setActiveTab('customers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'customers' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><Users size={18} /> Customers</button>
             
-            {/* 🚀 ADMIN TAB */}
             {isAdmin && (
               <button onClick={() => setActiveTab('admin')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'admin' ? 'bg-red-50 text-red-600 border border-red-100' : 'text-gray-500 hover:bg-gray-50'}`}><Settings size={18} /> Admin Panel</button>
             )}
@@ -280,7 +276,6 @@ function Dashboard({ user }: { user: any }) {
         </div>
 
         <div className="mt-8 bg-gray-50 border border-gray-200 p-5 rounded-2xl">
-          <p className="text-[10px] text-gray-400 font-bold mb-2 truncate">@{username}</p>
           <div className="flex justify-between items-center mb-4">
             <span className="text-xs text-gray-500 font-bold uppercase flex items-center gap-1"><Wallet size={14}/> Credits</span>
             <span className="text-2xl font-black text-gray-900">{credits}</span>
@@ -292,204 +287,223 @@ function Dashboard({ user }: { user: any }) {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         
-        {/* 🚀 GLOBAL ANNOUNCEMENT FOR ALL USERS */}
-        {globalNote && (
-          <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 mb-8 rounded-r-xl shadow-sm flex items-start gap-3 animate-fade-in">
-            <Megaphone size={20} className="mt-0.5 shrink-0" />
+        {/* 🚀 NEW TOP HEADER MENU (Shows Username) */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-full ${isAdmin ? 'bg-red-100 text-red-600' : 'bg-purple-100 text-purple-600'}`}>
+              <UserCircle size={24} />
+            </div>
             <div>
-              <p className="font-bold text-sm">Admin Announcement</p>
-              <p className="text-sm">{globalNote}</p>
+              <h2 className="text-sm text-gray-500 font-semibold">Welcome back,</h2>
+              <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">@{username}</h1>
             </div>
           </div>
-        )}
-
-        {/* 🚀 ADMIN PANEL */}
-        {activeTab === 'admin' && isAdmin && (
-          <div className="animate-fade-in space-y-8">
-            <h1 className="text-3xl font-extrabold text-red-600">Admin Control Panel</h1>
-
-            {/* Global Note */}
-            <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Megaphone size={18} className="text-red-500"/> Broadcast Note to All Users</h2>
-              <div className="space-y-4">
-                <textarea 
-                  placeholder="Type an announcement for all users (e.g., Server maintenance at 10 PM, or Special offer!)..." 
-                  value={newGlobalNoteInput} 
-                  onChange={e => setNewGlobalNoteInput(e.target.value)} 
-                  className="w-full border rounded-xl p-3 text-sm focus:outline-none focus:border-red-500" 
-                  rows={3}
-                ></textarea>
-                <button onClick={handlePublishGlobalNote} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Publish to All Accounts</button>
-              </div>
-            </div>
-
-            {/* Send Credits */}
-            <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Send size={18} className="text-red-500"/> Send Credits to User</h2>
-              <div className="flex gap-4 flex-wrap">
-                <input type="text" placeholder="Target Username (e.g. arpit)" value={targetUser} onChange={e => setTargetUser(e.target.value)} className="flex-1 border rounded-xl p-3 text-sm focus:outline-none" />
-                <input type="number" placeholder="Credits" value={creditAmount} onChange={e => setCreditAmount(e.target.value)} className="w-32 border rounded-xl p-3 text-sm focus:outline-none" />
-                <button onClick={handleSendCredits} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Send</button>
-              </div>
-            </div>
-
-            {/* Add Note to Specific Website */}
-            <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Info size={18} className="text-red-500"/> Put Note on Any Website</h2>
-              <div className="space-y-4">
-                <select 
-                  className="w-full border rounded-xl p-3 text-sm focus:outline-none"
-                  onChange={(e) => {
-                    const site = allSitesForAdmin.find(s => s.id === e.target.value);
-                    setSelectedSiteForNote(site);
-                    setAdminNoteText(site?.adminNote || '');
-                  }}
-                >
-                  <option value="">Select a Website...</option>
-                  {allSitesForAdmin.map(s => (
-                    <option key={s.id} value={s.id}>{s.siteName} ({s.slug})</option>
-                  ))}
-                </select>
-                
-                {selectedSiteForNote && (
-                  <>
-                    <textarea 
-                      placeholder="Write an official notice for this specific website..." 
-                      value={adminNoteText} 
-                      onChange={e => setAdminNoteText(e.target.value)} 
-                      className="w-full border rounded-xl p-3 text-sm focus:outline-none" 
-                      rows={3}
-                    ></textarea>
-                    <button onClick={handleSetAdminNote} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Publish Note to Website</button>
-                  </>
-                )}
-              </div>
-            </div>
+          <div className="hidden md:block">
+            <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${isAdmin ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-green-50 text-green-600 border border-green-100'}`}>
+              {isAdmin ? 'Admin Account' : 'Active Member'}
+            </span>
           </div>
-        )}
+        </div>
 
-        {/* NORMAL USER TABS */}
-        {activeTab === 'builder' && (
-          <>
-            <div className="mb-8"><h1 className="text-3xl font-extrabold text-gray-900">Site Builder</h1></div>
-            
-            {step === 'select' && (
-              <div className="animate-fade-in">
-                <h2 className="text-sm font-bold text-gray-600 mb-4 uppercase tracking-wider">1. Choose Business Type</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
-                  {CATEGORIES.map((cat) => (
-                    <button key={cat.id} onClick={() => { setSelectedCategory(cat); setBio(cat.defaultBio); setStep('details'); }} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-purple-500 transition flex flex-col items-center gap-3">
-                      <div className="p-3 bg-purple-50 rounded-xl text-purple-600">{cat.icon}</div>
-                      <span className="font-bold text-sm text-gray-800">{cat.name}</span>
-                    </button>
-                  ))}
+        {/* SCROLLABLE CONTENT AREA */}
+        <div className="flex-1 p-6 md:p-10 overflow-y-auto">
+          
+          {/* 🚀 GLOBAL ANNOUNCEMENT FOR ALL USERS */}
+          {globalNote && activeTab !== 'admin' && (
+            <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 mb-8 rounded-r-xl shadow-sm flex items-start gap-3 animate-fade-in">
+              <Megaphone size={20} className="mt-0.5 shrink-0" />
+              <div>
+                <p className="font-bold text-sm">Admin Announcement</p>
+                <p className="text-sm">{globalNote}</p>
+              </div>
+            </div>
+          )}
+
+          {/* 🚀 ADMIN PANEL */}
+          {activeTab === 'admin' && isAdmin && (
+            <div className="animate-fade-in space-y-8">
+              <h1 className="text-3xl font-extrabold text-red-600">Admin Control Panel</h1>
+
+              <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Megaphone size={18} className="text-red-500"/> Broadcast Note to All Users</h2>
+                <div className="space-y-4">
+                  <textarea 
+                    placeholder="Type an announcement for all users (e.g., Server maintenance at 10 PM)..." 
+                    value={newGlobalNoteInput} 
+                    onChange={e => setNewGlobalNoteInput(e.target.value)} 
+                    className="w-full border rounded-xl p-3 text-sm focus:outline-none focus:border-red-500" 
+                    rows={3}
+                  ></textarea>
+                  <button onClick={handlePublishGlobalNote} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Publish to All Accounts</button>
                 </div>
+              </div>
 
-                <div className="mt-12 border-t border-gray-200 pt-8">
-                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-6"><Globe size={20} className="text-purple-600"/> My Websites ({sites.length})</h2>
+              <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Send size={18} className="text-red-500"/> Send Credits to User</h2>
+                <div className="flex gap-4 flex-wrap">
+                  <input type="text" placeholder="Target Username (e.g. arpit)" value={targetUser} onChange={e => setTargetUser(e.target.value)} className="flex-1 border rounded-xl p-3 text-sm focus:outline-none" />
+                  <input type="number" placeholder="Credits" value={creditAmount} onChange={e => setCreditAmount(e.target.value)} className="w-32 border rounded-xl p-3 text-sm focus:outline-none" />
+                  <button onClick={handleSendCredits} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Send</button>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Info size={18} className="text-red-500"/> Put Note on Any Website</h2>
+                <div className="space-y-4">
+                  <select 
+                    className="w-full border rounded-xl p-3 text-sm focus:outline-none"
+                    onChange={(e) => {
+                      const site = allSitesForAdmin.find(s => s.id === e.target.value);
+                      setSelectedSiteForNote(site);
+                      setAdminNoteText(site?.adminNote || '');
+                    }}
+                  >
+                    <option value="">Select a Website...</option>
+                    {allSitesForAdmin.map(s => (
+                      <option key={s.id} value={s.id}>{s.siteName} ({s.slug})</option>
+                    ))}
+                  </select>
                   
-                  {isLoadingSites ? (
-                    <div className="text-center py-10 bg-white rounded-xl border border-gray-200">
-                      <Loader2 className="animate-spin text-purple-600 mx-auto mb-2" size={24} />
-                      <p className="text-sm text-gray-500">Loading history...</p>
-                    </div>
-                  ) : sites.length === 0 ? (
-                    <div className="text-sm text-gray-500 bg-white p-6 rounded-xl border border-gray-200 text-center flex flex-col items-center justify-center">
-                      <Info size={32} className="text-gray-300 mb-2" />
-                      <p>No websites found in history.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {sites.map(site => (
-                        <div key={site.id} className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="text-gray-900 font-bold text-lg">{site.siteName}</h4>
-                              <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-bold uppercase">{site.categoryName}</span>
-                            </div>
-                            <button onClick={() => handleDeleteSite(site.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 size={16}/></button>
-                          </div>
-                          
-                          <p className="text-xs text-purple-600 font-mono truncate">/site/{site.slug}</p>
-                          
-                          <div className="flex gap-2 w-full">
-                            <button onClick={() => copyLink(site.slug)} className="flex-1 bg-gray-50 border border-gray-200 hover:bg-gray-100 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition">
-                              {copied === site.slug ? <Check size={14} className="text-green-500"/> : <Copy size={14} />} {copied === site.slug ? 'Copied!' : 'Copy Link'}
-                            </button>
-                            <a href={`/site/${site.slug}`} target="_blank" rel="noreferrer" className="flex-1 bg-purple-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition shadow-sm">
-                              <ExternalLink size={14} /> Visit
-                            </a>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  {selectedSiteForNote && (
+                    <>
+                      <textarea 
+                        placeholder="Write an official notice for this specific website..." 
+                        value={adminNoteText} 
+                        onChange={e => setAdminNoteText(e.target.value)} 
+                        className="w-full border rounded-xl p-3 text-sm focus:outline-none" 
+                        rows={3}
+                      ></textarea>
+                      <button onClick={handleSetAdminNote} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Publish Note to Website</button>
+                    </>
                   )}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {step === 'details' && selectedCategory && (
-              <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-sm animate-fade-in max-w-2xl mx-auto">
-                <button onClick={() => setStep('select')} className="text-xs font-bold text-gray-500 hover:text-gray-900 mb-6 flex items-center gap-1"><ArrowLeft size={14}/> Back to Categories</button>
-                <h2 className="text-sm font-bold text-gray-600 mb-6 uppercase tracking-wider flex items-center gap-2">
-                  <span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center">2</span> 
-                  Enter {selectedCategory.name} Details
-                </h2>
-                <div className="space-y-4">
-                  <input type="text" value={siteName} onChange={(e) => setSiteName(e.target.value)} placeholder="Business Name" className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
-                  <input type="text" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short Tagline" className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <input type="text" value={link1} onChange={(e) => setLink1(e.target.value)} placeholder={`Link for ${selectedCategory.btn1}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
-                    <input type="text" value={link2} onChange={(e) => setLink2(e.target.value)} placeholder={`Link for ${selectedCategory.btn2}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
-                  </div>
-
-                  <h2 className="text-sm font-bold text-gray-600 mt-6 mb-4 uppercase tracking-wider flex items-center gap-2">
-                    <span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center">3</span> 
-                    Choose Theme
-                  </h2>
-                  <div className="flex gap-3 mb-6">
-                    <button onClick={() => setTheme('white')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'white' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>White</button>
-                    <button onClick={() => setTheme('neon')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'neon' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Neon</button>
-                    <button onClick={() => setTheme('hacker')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'hacker' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Hacker</button>
-                  </div>
-
-                  <button onClick={handleGenerate} disabled={isGenerating} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-bold flex justify-center items-center gap-2 shadow-lg">
-                    {isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />} Generate Website (1 Credit)
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* CUSTOMERS */}
-        {activeTab === 'customers' && (
-          <div className="animate-fade-in">
-             <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Customer CRM</h1>
-             <div className="bg-white p-6 rounded-2xl border mb-6 shadow-sm flex gap-4 flex-wrap">
-                <input type="text" value={newCustName} onChange={e => setNewCustName(e.target.value)} placeholder="Customer Name" className="flex-1 border rounded-lg p-2 text-sm focus:outline-none" />
-                <input type="text" value={newCustPhone} onChange={e => setNewCustPhone(e.target.value)} placeholder="Phone Number" className="flex-1 border rounded-lg p-2 text-sm focus:outline-none" />
-                <button onClick={saveCustomer} className="bg-purple-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-1"><Plus size={16}/> Add</button>
-             </div>
-             <div className="bg-white rounded-2xl border overflow-hidden">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50 border-b"><tr><th className="p-4 font-bold text-gray-600">Name</th><th className="p-4 font-bold text-gray-600">Phone</th><th className="p-4 font-bold text-gray-600">Action</th></tr></thead>
-                  <tbody>
-                    {customers.map(cust => (
-                      <tr key={cust.id} className="border-b last:border-0 hover:bg-gray-50">
-                        <td className="p-4">{cust.name}</td>
-                        <td className="p-4">{cust.phone}</td>
-                        <td className="p-4"><button onClick={() => deleteDoc(doc(db, "customers", cust.id))} className="text-red-500"><Trash2 size={16}/></button></td>
-                      </tr>
+          {/* NORMAL USER TABS */}
+          {activeTab === 'builder' && (
+            <>
+              <div className="mb-8"><h1 className="text-3xl font-extrabold text-gray-900">Site Builder</h1></div>
+              
+              {step === 'select' && (
+                <div className="animate-fade-in">
+                  <h2 className="text-sm font-bold text-gray-600 mb-4 uppercase tracking-wider">1. Choose Business Type</h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
+                    {CATEGORIES.map((cat) => (
+                      <button key={cat.id} onClick={() => { setSelectedCategory(cat); setBio(cat.defaultBio); setStep('details'); }} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:border-purple-500 transition flex flex-col items-center gap-3">
+                        <div className="p-3 bg-purple-50 rounded-xl text-purple-600">{cat.icon}</div>
+                        <span className="font-bold text-sm text-gray-800">{cat.name}</span>
+                      </button>
                     ))}
-                  </tbody>
-                </table>
-             </div>
-          </div>
-        )}
+                  </div>
+
+                  <div className="mt-12 border-t border-gray-200 pt-8">
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-6"><Globe size={20} className="text-purple-600"/> My Websites ({sites.length})</h2>
+                    
+                    {isLoadingSites ? (
+                      <div className="text-center py-10 bg-white rounded-xl border border-gray-200">
+                        <Loader2 className="animate-spin text-purple-600 mx-auto mb-2" size={24} />
+                        <p className="text-sm text-gray-500">Loading history...</p>
+                      </div>
+                    ) : sites.length === 0 ? (
+                      <div className="text-sm text-gray-500 bg-white p-6 rounded-xl border border-gray-200 text-center flex flex-col items-center justify-center">
+                        <Info size={32} className="text-gray-300 mb-2" />
+                        <p>No websites found in history.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {sites.map(site => (
+                          <div key={site.id} className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="text-gray-900 font-bold text-lg">{site.siteName}</h4>
+                                <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded font-bold uppercase">{site.categoryName}</span>
+                              </div>
+                              <button onClick={() => handleDeleteSite(site.id)} className="text-gray-400 hover:text-red-500 p-1"><Trash2 size={16}/></button>
+                            </div>
+                            
+                            <p className="text-xs text-purple-600 font-mono truncate">/site/{site.slug}</p>
+                            
+                            <div className="flex gap-2 w-full">
+                              <button onClick={() => copyLink(site.slug)} className="flex-1 bg-gray-50 border border-gray-200 hover:bg-gray-100 px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition">
+                                {copied === site.slug ? <Check size={14} className="text-green-500"/> : <Copy size={14} />} {copied === site.slug ? 'Copied!' : 'Copy Link'}
+                              </button>
+                              <a href={`/site/${site.slug}`} target="_blank" rel="noreferrer" className="flex-1 bg-purple-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition shadow-sm">
+                                <ExternalLink size={14} /> Visit
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {step === 'details' && selectedCategory && (
+                <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-sm animate-fade-in max-w-2xl mx-auto">
+                  <button onClick={() => setStep('select')} className="text-xs font-bold text-gray-500 hover:text-gray-900 mb-6 flex items-center gap-1"><ArrowLeft size={14}/> Back to Categories</button>
+                  <h2 className="text-sm font-bold text-gray-600 mb-6 uppercase tracking-wider flex items-center gap-2">
+                    <span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center">2</span> 
+                    Enter {selectedCategory.name} Details
+                  </h2>
+                  <div className="space-y-4">
+                    <input type="text" value={siteName} onChange={(e) => setSiteName(e.target.value)} placeholder="Business Name" className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
+                    <input type="text" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short Tagline" className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <input type="text" value={link1} onChange={(e) => setLink1(e.target.value)} placeholder={`Link for ${selectedCategory.btn1}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
+                      <input type="text" value={link2} onChange={(e) => setLink2(e.target.value)} placeholder={`Link for ${selectedCategory.btn2}`} className="w-full bg-gray-50 border rounded-xl p-3 text-sm focus:border-purple-500 focus:outline-none" />
+                    </div>
+
+                    <h2 className="text-sm font-bold text-gray-600 mt-6 mb-4 uppercase tracking-wider flex items-center gap-2">
+                      <span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center">3</span> 
+                      Choose Theme
+                    </h2>
+                    <div className="flex gap-3 mb-6">
+                      <button onClick={() => setTheme('white')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'white' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>White</button>
+                      <button onClick={() => setTheme('neon')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'neon' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Neon</button>
+                      <button onClick={() => setTheme('hacker')} className={`flex-1 p-3 rounded-xl border-2 font-bold text-xs ${theme === 'hacker' ? 'border-purple-600 bg-purple-50 text-purple-600' : 'border-gray-200'}`}>Hacker</button>
+                    </div>
+
+                    <button onClick={handleGenerate} disabled={isGenerating} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-bold flex justify-center items-center gap-2 shadow-lg">
+                      {isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />} Generate Website (1 Credit)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* CUSTOMERS */}
+          {activeTab === 'customers' && (
+            <div className="animate-fade-in">
+               <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Customer CRM</h1>
+               <div className="bg-white p-6 rounded-2xl border mb-6 shadow-sm flex gap-4 flex-wrap">
+                  <input type="text" value={newCustName} onChange={e => setNewCustName(e.target.value)} placeholder="Customer Name" className="flex-1 border rounded-lg p-2 text-sm focus:outline-none" />
+                  <input type="text" value={newCustPhone} onChange={e => setNewCustPhone(e.target.value)} placeholder="Phone Number" className="flex-1 border rounded-lg p-2 text-sm focus:outline-none" />
+                  <button onClick={saveCustomer} className="bg-purple-600 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-1"><Plus size={16}/> Add</button>
+               </div>
+               <div className="bg-white rounded-2xl border overflow-hidden">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-gray-50 border-b"><tr><th className="p-4 font-bold text-gray-600">Name</th><th className="p-4 font-bold text-gray-600">Phone</th><th className="p-4 font-bold text-gray-600">Action</th></tr></thead>
+                    <tbody>
+                      {customers.map(cust => (
+                        <tr key={cust.id} className="border-b last:border-0 hover:bg-gray-50">
+                          <td className="p-4">{cust.name}</td>
+                          <td className="p-4">{cust.phone}</td>
+                          <td className="p-4"><button onClick={() => deleteDoc(doc(db, "customers", cust.id))} className="text-red-500"><Trash2 size={16}/></button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+               </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* TOP-UP MODAL */}
