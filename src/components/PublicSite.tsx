@@ -3,7 +3,7 @@ import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/f
 import { db } from '../firebase';
 import { 
   ShieldCheck, Zap, Star, Phone, Sparkles, ShoppingBag, 
-  Settings, X, Plus, Trash2, Save, Loader2
+  Settings, X, Plus, Trash2, Save, Loader2, Megaphone
 } from 'lucide-react';
 
 export default function PublicSite({ slug }: { slug: string }) {
@@ -11,7 +11,11 @@ export default function PublicSite({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [siteDocId, setSiteDocId] = useState<string>('');
   
-  const isOwner = localStorage.getItem('my_site_slug') === slug;
+  // Owner Check (Taaki sirf owner hi edit button dekh sake)
+  const isOwner = localStorage.getItem('my_last_site_data') 
+    ? JSON.parse(localStorage.getItem('my_last_site_data') || '{}').slug === slug 
+    : false;
+
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [newProdName, setNewProdName] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('');
@@ -19,13 +23,9 @@ export default function PublicSite({ slug }: { slug: string }) {
 
   useEffect(() => {
     const cleanSlug = decodeURIComponent(slug).trim();
-    
-    if (!cleanSlug) {
-      setLoading(false);
-      return;
-    }
+    if (!cleanSlug) { setLoading(false); return; }
 
-    // 1. Check Local Storage First (Instant Load)
+    // 1. LocalStorage se data uthao (Instant load ke liye)
     const localData = localStorage.getItem('my_last_site_data');
     if (localData) {
       const parsed = JSON.parse(localData);
@@ -35,43 +35,33 @@ export default function PublicSite({ slug }: { slug: string }) {
       }
     }
 
-    // 2. Fetch from Firebase (If it exists, update)
+    // 2. Firebase se live data fetch karo
     const q = query(collection(db, "ai_sites"), where("slug", "==", cleanSlug));
     const unsub = onSnapshot(q, (snap) => {
       if (!snap.empty) {
         setSiteData(snap.docs[0].data());
         setSiteDocId(snap.docs[0].id);
         setLoading(false); 
+      } else {
+        setTimeout(() => setLoading(false), 2000);
       }
     });
 
-    // 3. Force stop loading after 3 seconds
-    const forceStopTimer = setTimeout(() => setLoading(false), 3000);
-
-    return () => {
-      unsub();
-      clearTimeout(forceStopTimer);
-    };
+    return () => unsub();
   }, [slug]);
 
   const handleAddProduct = async () => {
     if (!newProdName || !newProdPrice) return alert("Name aur Price zaroori hai!");
-    
     const newProduct = { name: newProdName, price: newProdPrice, link: newProdLink || "#" };
     const updatedProducts = [...(siteData.products || []), newProduct];
-
-    // Update Local
     const updatedSite = { ...siteData, products: updatedProducts };
+
     setSiteData(updatedSite);
     localStorage.setItem('my_last_site_data', JSON.stringify(updatedSite));
 
-    // Update DB
     if (siteDocId) {
-      try {
-        await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
-      } catch(e) { console.log(e); }
+      try { await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts }); } catch(e) { console.log(e); }
     }
-
     setNewProdName(''); setNewProdPrice(''); setNewProdLink('');
     alert("Product Added!");
   };
@@ -79,15 +69,13 @@ export default function PublicSite({ slug }: { slug: string }) {
   const handleDeleteProduct = async (index: number) => {
     if(!window.confirm("Delete this product?")) return;
     const updatedProducts = siteData.products.filter((_: any, i: number) => i !== index);
-    
     const updatedSite = { ...siteData, products: updatedProducts };
+
     setSiteData(updatedSite);
     localStorage.setItem('my_last_site_data', JSON.stringify(updatedSite));
 
     if (siteDocId) {
-      try {
-        await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
-      } catch (e) { console.log(e); }
+      try { await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts }); } catch (e) { console.log(e); }
     }
   };
 
@@ -104,7 +92,6 @@ export default function PublicSite({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f9fa] text-gray-800">
         <h1 className="text-2xl font-bold mb-2">404 - Site Not Found</h1>
-        <p className="text-sm text-gray-500 mb-4">This site might still be saving in the database.</p>
         <a href="/" className="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold text-sm">Go to Dashboard</a>
       </div>
     );
@@ -132,6 +119,7 @@ export default function PublicSite({ slug }: { slug: string }) {
         </>
       )}
 
+      {/* 🚀 OWNER EDIT BUTTON (Sirf owner ko dikhega) */}
       {isOwner && (
         <button onClick={() => setIsEditOpen(true)} className={`fixed top-6 right-6 z-50 p-3 rounded-full text-white shadow-2xl animate-pulse ${accentColor}`}>
           <Settings size={24} />
@@ -140,6 +128,17 @@ export default function PublicSite({ slug }: { slug: string }) {
 
       <div className="max-w-5xl mx-auto px-4 py-12 relative z-10">
         
+        {/* 🚀 ADMIN ANNOUNCEMENT BANNER (Yeh Admin panel se set hota hai) */}
+        {siteData.adminNote && (
+          <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-8 rounded-r-xl shadow-sm flex items-start gap-3">
+            <Megaphone size={20} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="font-bold text-sm">Official Announcement</p>
+              <p className="text-sm">{siteData.adminNote}</p>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-12">
           <div className={`flex items-center gap-2 font-extrabold text-xl tracking-tight ${textMain}`}>
             <div className={`p-1.5 rounded-lg ${accentColor}`}><Sparkles size={16} className="text-white" /></div>
@@ -167,6 +166,7 @@ export default function PublicSite({ slug }: { slug: string }) {
           </div>
         </div>
 
+        {/* PRODUCTS SECTION */}
         {siteData.products && siteData.products.length > 0 && (
           <div className="mb-16">
             <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${textMain}`}><ShoppingBag className={accentText}/> Our Products</h2>
@@ -190,6 +190,7 @@ export default function PublicSite({ slug }: { slug: string }) {
           </div>
         )}
 
+        {/* FEATURES SECTION */}
         <div className="mb-16">
           <h2 className={`text-2xl font-bold mb-6 flex items-center gap-2 ${textMain}`}><Star className={accentText}/> Why Choose Us?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -199,12 +200,14 @@ export default function PublicSite({ slug }: { slug: string }) {
           </div>
         </div>
 
+        {/* FOOTER */}
         <div className={`mt-20 pt-8 border-t text-center ${isNeon || isHacker ? 'border-white/10' : 'border-gray-200'}`}>
           <p className={`text-xs font-bold ${textSub} flex items-center justify-center gap-1`}><Sparkles size={14} className={accentText} /> Powered by WebCraft SaaS</p>
         </div>
 
       </div>
 
+      {/* OWNER EDIT PANEL (Products add karne ke liye) */}
       {isOwner && isEditOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
@@ -213,8 +216,8 @@ export default function PublicSite({ slug }: { slug: string }) {
             <p className="text-xs text-gray-500 mb-4">Only you can see this panel. Add products to your website.</p>
             
             <div className="space-y-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
-              <input type="text" placeholder="Product Name (e.g. T-Shirt)" value={newProdName} onChange={e => setNewProdName(e.target.value)} className="w-full border p-2 rounded-lg text-sm" />
-              <input type="text" placeholder="Price (e.g. 499)" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} className="w-full border p-2 rounded-lg text-sm" />
+              <input type="text" placeholder="Product Name" value={newProdName} onChange={e => setNewProdName(e.target.value)} className="w-full border p-2 rounded-lg text-sm" />
+              <input type="text" placeholder="Price" value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} className="w-full border p-2 rounded-lg text-sm" />
               <input type="text" placeholder="WhatsApp/Order Link" value={newProdLink} onChange={e => setNewProdLink(e.target.value)} className="w-full border p-2 rounded-lg text-sm" />
               <button onClick={handleAddProduct} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg flex items-center justify-center gap-1"><Plus size={16}/> Add Product</button>
             </div>
