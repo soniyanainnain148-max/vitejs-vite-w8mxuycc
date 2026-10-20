@@ -11,7 +11,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
 
 // 🚨 YAHAN APNA ADMIN EMAIL DAALEIN
-const ADMIN_EMAIL = "arpit_ka_email@gmail.com"; 
+const ADMIN_EMAIL = "soniyanainnain148@gmail.com"; 
 
 function App() {
   const [user, setUser] = useState<any>(null);
