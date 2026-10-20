@@ -11,7 +11,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
 
 // 🚨 YAHAN APNA ADMIN EMAIL DAALEIN
-const ADMIN_EMAIL = "arpit_ka_email@gmail.com"; 
+const ADMIN_EMAIL = "soniyanainnain148@gmail.com"; 
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -60,8 +60,10 @@ function Dashboard({ user }: { user: any }) {
   const [newGlobalNoteInput, setNewGlobalNoteInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [utr, setUtr] = useState('');
+  const [topupAmount, setTopupAmount] = useState<number | ''>(100);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const [step, setStep] = useState('select'); 
@@ -82,8 +84,6 @@ function Dashboard({ user }: { user: any }) {
   const [selectedSiteForNote, setSelectedSiteForNote] = useState<any>(null);
 
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
-  const TOPUP_AMOUNT = 50;
-  const CREDITS_TO_ADD = 5;
   const USER_ID = user.uid; 
 
   useEffect(() => {
@@ -128,14 +128,18 @@ function Dashboard({ user }: { user: any }) {
   const handleLogout = () => { if(window.confirm("Logout?")) signOut(auth); };
 
   const handleVerifyPayment = async () => {
+    if (!topupAmount || topupAmount < 100) return alert("Minimum top-up is ₹100");
     if (utr.length < 8) return alert("Enter valid UTR!");
+    
+    const creditsToAdd = Math.floor(topupAmount / 100);
     setIsVerifying(true);
+    
     setTimeout(async () => {
       try {
-        await updateDoc(doc(db, "users", USER_ID), { credits: credits + CREDITS_TO_ADD });
-        setCredits(prev => prev + CREDITS_TO_ADD);
-        setIsTopUpOpen(false); setUtr('');
-        alert(`✅ Payment Verified! ${CREDITS_TO_ADD} Credits Added.`);
+        await updateDoc(doc(db, "users", USER_ID), { credits: credits + creditsToAdd });
+        setCredits(prev => prev + creditsToAdd);
+        setIsTopUpOpen(false); setUtr(''); setTopupAmount(100);
+        alert(`✅ Payment Verified! ${creditsToAdd} Credits Added.`);
       } catch (error) { alert("Failed!"); }
       setIsVerifying(false);
     }, 1000); 
@@ -156,14 +160,6 @@ function Dashboard({ user }: { user: any }) {
 
   const handlePublishGlobalNote = async () => {
     try { await setDoc(doc(db, "settings", "global_note"), { text: newGlobalNoteInput }); alert("✅ Published!"); } catch (e) { alert("Error!"); }
-  };
-
-  const handleSetAdminNote = async () => {
-    if (!selectedSiteForNote) return alert("Select a website!");
-    try {
-      await updateDoc(doc(db, "ai_sites", selectedSiteForNote.id), { adminNote: adminNoteText });
-      alert("✅ Note Published!"); setSelectedSiteForNote(null); setAdminNoteText('');
-    } catch (e) { alert("Error!"); }
   };
 
   const handleGenerate = async () => {
@@ -204,7 +200,9 @@ function Dashboard({ user }: { user: any }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex flex-col md:flex-row font-sans text-gray-800">
+    <div className="min-h-screen bg-[#f8f9fa] flex flex-col md:flex-row font-sans text-gray-800 relative">
+      
+      {/* Sidebar */}
       <div className="w-full md:w-64 bg-white border-r border-gray-200 p-4 flex flex-col justify-between md:h-screen sticky top-0 z-40">
         <div>
           <div className="flex items-center justify-between mb-8 px-2 mt-2">
@@ -225,10 +223,11 @@ function Dashboard({ user }: { user: any }) {
             <span className="text-xs text-gray-500 font-bold uppercase flex items-center gap-1"><Wallet size={14}/> Credits</span>
             <span className="text-2xl font-black text-gray-900">{credits}</span>
           </div>
-          <button onClick={() => setIsTopUpOpen(true)} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-md flex items-center justify-center gap-2"><QrCode size={16} /> Top-up ₹{TOPUP_AMOUNT}</button>
+          <button onClick={() => setIsTopUpOpen(true)} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl text-xs font-bold shadow-md flex items-center justify-center gap-2"><QrCode size={16} /> Top-up Credits</button>
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-3">
@@ -240,7 +239,7 @@ function Dashboard({ user }: { user: any }) {
           </div>
         </div>
 
-        <div className="flex-1 p-6 md:p-10 overflow-y-auto">
+        <div className="flex-1 p-6 md:p-10 overflow-y-auto pb-24">
           {globalNote && activeTab !== 'admin' && (
             <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 mb-8 rounded-r-xl shadow-sm flex items-start gap-3"><Megaphone size={20} /> <div><p className="font-bold text-sm">Announcement</p><p className="text-sm">{globalNote}</p></div></div>
           )}
@@ -291,10 +290,7 @@ function Dashboard({ user }: { user: any }) {
                             <p className="text-xs text-purple-600 font-mono truncate">/site/{site.slug}</p>
                             <div className="flex gap-2 w-full">
                               <button onClick={() => copyLink(site.slug)} className="flex-1 bg-gray-50 border px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1">{copied === site.slug ? <Check size={14} className="text-green-500"/> : <Copy size={14} />} Copy</button>
-                              
-                              {/* 🚀 MANAGE BUTTON */}
                               <a href={`/site/${site.slug}?edit=true`} className="flex-1 bg-green-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-green-700"><Edit size={14} /> Manage</a>
-                              
                               <a href={`/site/${site.slug}`} target="_blank" className="flex-1 bg-purple-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1 hover:bg-purple-700"><ExternalLink size={14} /> Visit</a>
                             </div>
                           </div>
@@ -346,13 +342,36 @@ function Dashboard({ user }: { user: any }) {
         </div>
       </div>
 
+      {/* 🚀 TELEGRAM SUPPORT BUTTON (Dashboard ke liye) */}
+      <a 
+        href="https://t.me/YourTelegramUsername" // 👈 Yahan apna Telegram Username daalein
+        target="_blank" 
+        rel="noreferrer"
+        className="fixed bottom-6 right-6 z-50 bg-[#0088cc] text-white p-4 rounded-full shadow-[0_0_20px_rgba(0,136,204,0.5)] hover:scale-110 hover:bg-[#0077b3] transition-all flex items-center justify-center group"
+      >
+        <Send size={28} className="group-hover:animate-pulse" />
+      </a>
+
+      {/* TOP-UP MODAL */}
       {isTopUpOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm text-center">
-             <h2 className="text-xl font-bold mb-4">Scan & Pay</h2>
-             <img src={FAMPAY_QR_URL} className="w-48 mx-auto mb-4 rounded-xl" />
-             <input type="text" value={utr} onChange={e => setUtr(e.target.value)} placeholder="Enter UTR" className="w-full border p-2 rounded-lg mb-4 text-sm text-center" />
-             <button onClick={handleVerifyPayment} className="w-full bg-green-500 text-white font-bold py-2 rounded-lg">Verify</button>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm text-center relative">
+            <button onClick={() => setIsTopUpOpen(false)} className="absolute top-4 right-4 text-gray-400"><X size={24} /></button>
+            <h2 className="text-xl font-bold mb-1">Top-up Credits</h2>
+            <p className="text-xs text-gray-500 mb-4 font-semibold">Rate: ₹100 = 1 Credit</p>
+            
+            <div className="mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+              <label className="text-[10px] font-bold text-gray-500 block mb-1 text-left">Enter Amount to Pay (₹)</label>
+              <input type="number" value={topupAmount} onChange={e => setTopupAmount(Number(e.target.value))} className="w-full border border-gray-300 p-3 rounded-lg text-lg text-center font-bold focus:outline-none focus:border-purple-500" placeholder="e.g. 500" />
+              <p className="text-purple-600 text-sm font-bold mt-2">You will get {Math.floor((topupAmount || 0) / 100)} Credits</p>
+            </div>
+
+            <img src={FAMPAY_QR_URL} className="w-48 mx-auto mb-4 rounded-xl border-2 border-purple-200 shadow-md" />
+            <input type="text" value={utr} onChange={e => setUtr(e.target.value)} placeholder="Enter 12-Digit UTR / Txn ID" className="w-full border p-3 rounded-lg mb-4 text-sm text-center focus:outline-none focus:border-purple-500 font-semibold" />
+            
+            <button onClick={handleVerifyPayment} disabled={isVerifying || !topupAmount || topupAmount < 100} className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg shadow-lg">
+              {isVerifying ? 'Verifying...' : `Verify & Add ${Math.floor((topupAmount || 0) / 100)} Credits`}
+            </button>
           </div>
         </div>
       )}
