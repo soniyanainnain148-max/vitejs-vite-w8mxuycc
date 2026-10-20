@@ -344,7 +344,7 @@ function Dashboard({ user }: { user: any }) {
 
       {/* 🚀 TELEGRAM SUPPORT BUTTON (Dashboard ke liye) */}
       <a 
-        href="https://t.me/YourTelegramUsername" // 👈 Yahan apna Telegram Username daalein
+        href="https://t.me/arpitff96" // 👈 Yahan apna Telegram Username daalein
         target="_blank" 
         rel="noreferrer"
         className="fixed bottom-6 right-6 z-50 bg-[#0088cc] text-white p-4 rounded-full shadow-[0_0_20px_rgba(0,136,204,0.5)] hover:scale-110 hover:bg-[#0077b3] transition-all flex items-center justify-center group"
