@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { 
   Globe, Loader2, Code2, Wallet, Zap, Sparkles, ExternalLink, 
   Copy, Check, X, QrCode, ShieldCheck, Store, Utensils, Dumbbell, 
-  Gamepad2, Stethoscope, Briefcase, ArrowLeft, FileText, Users, Trash2, Plus, Save, LogOut, Info
+  Gamepad2, Stethoscope, Briefcase, ArrowLeft, Users, Trash2, Plus, Save, LogOut, Info, Settings, Send
 } from 'lucide-react';
 import PublicSite from './components/PublicSite';
 import Auth from './components/Auth';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, doc, getDoc, updateDoc, setDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -47,9 +47,12 @@ function Dashboard({ user }: { user: any }) {
   const [activeTab, setActiveTab] = useState('builder');
   
   const [sites, setSites] = useState<any[]>([]);
+  const [allSitesForAdmin, setAllSitesForAdmin] = useState<any[]>([]);
   const [isLoadingSites, setIsLoadingSites] = useState(true);
   const [credits, setCredits] = useState(0); 
-  const [username, setUsername] = useState("Loading..."); // 🚀 Username State
+  const [username, setUsername] = useState("Loading...");
+  const [isAdmin, setIsAdmin] = useState(false);
+  
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   
@@ -65,13 +68,15 @@ function Dashboard({ user }: { user: any }) {
   const [link2, setLink2] = useState('');
   const [theme, setTheme] = useState('white');
 
-  const [notes, setNotes] = useState<any[]>([]);
-  const [newNoteTitle, setNewNoteTitle] = useState('');
-  const [newNoteContent, setNewNoteContent] = useState('');
-
   const [customers, setCustomers] = useState<any[]>([]);
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
+
+  // Admin Specific States
+  const [targetUser, setTargetUser] = useState('');
+  const [creditAmount, setCreditAmount] = useState('');
+  const [adminNoteText, setAdminNoteText] = useState('');
+  const [selectedSiteForNote, setSelectedSiteForNote] = useState<any>(null);
 
   const FAMPAY_QR_URL = "https://raw.githubusercontent.com/soniyanainnain148-max/vitejs-vite-w8mxuycc/main/public/Screenshot_20261018_050324_FamApp.jpg"; 
   const TOPUP_AMOUNT = 50;
@@ -85,28 +90,28 @@ function Dashboard({ user }: { user: any }) {
       
       if (snap.exists()) {
         setCredits(snap.data().credits || 0);
-        setUsername(snap.data().username || "User"); // 🚀 Fetch Username
+        const uName = snap.data().username || "User";
+        setUsername(uName);
+        if (uName.toLowerCase() === 'admin') setIsAdmin(true); // 🚀 Admin Check
       }
     };
     checkUser();
 
     const unsubSites = onSnapshot(collection(db, "ai_sites"), (snap) => {
       const allSites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const mySites = allSites.filter((site: any) => site.userId === USER_ID);
       
+      // User ki apni websites
+      const mySites = allSites.filter((site: any) => site.userId === USER_ID);
       mySites.sort((a: any, b: any) => {
-        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
         return timeB - timeA;
       });
-      
       setSites(mySites);
       setIsLoadingSites(false);
-    });
 
-    const unsubNotes = onSnapshot(collection(db, "notes"), (snap) => {
-      const allNotes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setNotes(allNotes.filter((n: any) => n.userId === USER_ID));
+      // Admin ke liye sab websites
+      setAllSitesForAdmin(allSites);
     });
 
     const unsubCust = onSnapshot(collection(db, "customers"), (snap) => {
@@ -114,7 +119,7 @@ function Dashboard({ user }: { user: any }) {
       setCustomers(allCust.filter((c: any) => c.userId === USER_ID));
     });
 
-    return () => { unsubSites(); unsubNotes(); unsubCust(); }; 
+    return () => { unsubSites(); unsubCust(); }; 
   }, [USER_ID]);
 
   const handleLogout = () => {
@@ -136,14 +141,45 @@ function Dashboard({ user }: { user: any }) {
     }, 1000); 
   };
 
+  // 🚀 ADMIN FUNCTION: Send Credits
+  const handleSendCredits = async () => {
+    if (!targetUser || !creditAmount) return alert("Username aur Amount daalein!");
+    try {
+      const q = query(collection(db, "users"), where("username", "==", targetUser.toLowerCase().trim()));
+      const snap = await getDocs(q);
+      
+      if (snap.empty) return alert("Username not found!");
+      
+      const targetDoc = snap.docs[0];
+      const currentCredits = targetDoc.data().credits || 0;
+      const newCredits = currentCredits + Number(creditAmount);
+      
+      await updateDoc(doc(db, "users", targetDoc.id), { credits: newCredits });
+      alert(`✅ Sent ${creditAmount} Credits to @${targetUser}. New Balance: ${newCredits}`);
+      setTargetUser(''); setCreditAmount('');
+    } catch (e) {
+      alert("Error sending credits.");
+    }
+  };
+
+  // 🚀 ADMIN FUNCTION: Set Note on Website
+  const handleSetAdminNote = async () => {
+    if (!selectedSiteForNote) return alert("Select a website first!");
+    try {
+      await updateDoc(doc(db, "ai_sites", selectedSiteForNote.id), { adminNote: adminNoteText });
+      alert("✅ Admin Note updated on website!");
+      setSelectedSiteForNote(null); setAdminNoteText('');
+    } catch (e) {
+      alert("Error setting note.");
+    }
+  };
+
   const handleGenerate = async () => {
     if (!siteName) return alert("Please enter your business name.");
     if (credits < 1) return alert("Aapke paas credits nahi hain! Please top-up first.");
 
     setIsGenerating(true);
-    
     try {
-      // Slug banate waqt username + business name use karenge taaki unique lage
       const generatedSlug = username + '-' + siteName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
 
       const newSite = {
@@ -166,12 +202,10 @@ function Dashboard({ user }: { user: any }) {
       
       setSites(prev => [{ id: docRef.id, ...newSite }, ...prev]);
       setCredits(prev => prev - 1);
-
       setIsGenerating(false); 
       setStep('select'); 
       setSiteName(''); setLink1(''); setLink2('');
       alert(`🚀 Website Generated Successfully!`);
-
     } catch (error: any) {
       setIsGenerating(false); 
       alert("❌ Error saving website: " + error.message);
@@ -183,12 +217,6 @@ function Dashboard({ user }: { user: any }) {
       await deleteDoc(doc(db, "ai_sites", id));
       setSites(prev => prev.filter(s => s.id !== id));
     }
-  };
-
-  const saveNote = async () => {
-    if(!newNoteTitle) return;
-    await addDoc(collection(db, "notes"), { userId: USER_ID, title: newNoteTitle, content: newNoteContent, createdAt: new Date() });
-    setNewNoteTitle(''); setNewNoteContent('');
   };
 
   const saveCustomer = async () => {
@@ -211,21 +239,24 @@ function Dashboard({ user }: { user: any }) {
         <div>
           <div className="flex items-center justify-between mb-8 px-2 mt-2">
             <div className="flex items-center gap-2">
-              <div className="bg-purple-600 p-2 rounded-xl shadow-md"><Code2 size={20} className="text-white" /></div>
-              <span className="font-extrabold text-lg text-gray-900">WEBCRAFT</span>
+              <div className={`p-2 rounded-xl shadow-md ${isAdmin ? 'bg-red-600' : 'bg-purple-600'}`}><Code2 size={20} className="text-white" /></div>
+              <span className="font-extrabold text-lg text-gray-900">WEBCRAFT {isAdmin && <span className="text-red-600">ADMIN</span>}</span>
             </div>
             <button onClick={handleLogout} className="text-gray-400 hover:text-red-500" title="Logout"><LogOut size={18} /></button>
           </div>
           
           <div className="flex flex-col gap-2">
             <button onClick={() => setActiveTab('builder')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'builder' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><Sparkles size={18} /> Site Builder</button>
-            <button onClick={() => setActiveTab('notes')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'notes' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><FileText size={18} /> My Notes</button>
             <button onClick={() => setActiveTab('customers')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'customers' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'text-gray-500 hover:bg-gray-50'}`}><Users size={18} /> Customers</button>
+            
+            {/* 🚀 ADMIN TAB */}
+            {isAdmin && (
+              <button onClick={() => setActiveTab('admin')} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition ${activeTab === 'admin' ? 'bg-red-50 text-red-600 border border-red-100' : 'text-gray-500 hover:bg-gray-50'}`}><Settings size={18} /> Admin Panel</button>
+            )}
           </div>
         </div>
 
         <div className="mt-8 bg-gray-50 border border-gray-200 p-5 rounded-2xl">
-          {/* 🚀 Display Username instead of Email */}
           <p className="text-[10px] text-gray-400 font-bold mb-2 truncate">@{username}</p>
           <div className="flex justify-between items-center mb-4">
             <span className="text-xs text-gray-500 font-bold uppercase flex items-center gap-1"><Wallet size={14}/> Credits</span>
@@ -239,6 +270,58 @@ function Dashboard({ user }: { user: any }) {
 
       {/* MAIN CONTENT */}
       <div className="flex-1 p-6 md:p-10 max-w-5xl mx-auto w-full h-screen overflow-y-auto">
+        
+        {/* 🚀 ADMIN PANEL */}
+        {activeTab === 'admin' && isAdmin && (
+          <div className="animate-fade-in space-y-8">
+            <h1 className="text-3xl font-extrabold text-red-600">Admin Control Panel</h1>
+
+            {/* Send Credits */}
+            <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Send size={18} className="text-red-500"/> Send Credits to User</h2>
+              <div className="flex gap-4 flex-wrap">
+                <input type="text" placeholder="Target Username (e.g. arpit)" value={targetUser} onChange={e => setTargetUser(e.target.value)} className="flex-1 border rounded-xl p-3 text-sm focus:outline-none" />
+                <input type="number" placeholder="Credits" value={creditAmount} onChange={e => setCreditAmount(e.target.value)} className="w-32 border rounded-xl p-3 text-sm focus:outline-none" />
+                <button onClick={handleSendCredits} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Send</button>
+              </div>
+            </div>
+
+            {/* Add Note to Website */}
+            <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><Info size={18} className="text-red-500"/> Put Admin Note on Any Website</h2>
+              <div className="space-y-4">
+                <select 
+                  className="w-full border rounded-xl p-3 text-sm focus:outline-none"
+                  onChange={(e) => {
+                    const site = allSitesForAdmin.find(s => s.id === e.target.value);
+                    setSelectedSiteForNote(site);
+                    setAdminNoteText(site?.adminNote || '');
+                  }}
+                >
+                  <option value="">Select a Website...</option>
+                  {allSitesForAdmin.map(s => (
+                    <option key={s.id} value={s.id}>{s.siteName} ({s.slug})</option>
+                  ))}
+                </select>
+                
+                {selectedSiteForNote && (
+                  <>
+                    <textarea 
+                      placeholder="Write an official notice for this website..." 
+                      value={adminNoteText} 
+                      onChange={e => setAdminNoteText(e.target.value)} 
+                      className="w-full border rounded-xl p-3 text-sm focus:outline-none" 
+                      rows={3}
+                    ></textarea>
+                    <button onClick={handleSetAdminNote} className="bg-red-600 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md">Publish Note</button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* NORMAL USER TABS */}
         {activeTab === 'builder' && (
           <>
             <div className="mb-8"><h1 className="text-3xl font-extrabold text-gray-900">Site Builder</h1></div>
@@ -255,7 +338,6 @@ function Dashboard({ user }: { user: any }) {
                   ))}
                 </div>
 
-                {/* WEBSITE HISTORY */}
                 <div className="mt-12 border-t border-gray-200 pt-8">
                   <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2 mb-6"><Globe size={20} className="text-purple-600"/> My Websites ({sites.length})</h2>
                   
@@ -268,7 +350,6 @@ function Dashboard({ user }: { user: any }) {
                     <div className="text-sm text-gray-500 bg-white p-6 rounded-xl border border-gray-200 text-center flex flex-col items-center justify-center">
                       <Info size={32} className="text-gray-300 mb-2" />
                       <p>No websites found in history.</p>
-                      <p className="text-xs mt-2 text-gray-400">Generate a new website above to see it here.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -333,27 +414,6 @@ function Dashboard({ user }: { user: any }) {
               </div>
             )}
           </>
-        )}
-
-        {/* NOTES */}
-        {activeTab === 'notes' && (
-          <div className="animate-fade-in">
-             <h1 className="text-3xl font-extrabold text-gray-900 mb-6">My Notes</h1>
-             <div className="bg-white p-6 rounded-2xl border mb-6 shadow-sm">
-                <input type="text" value={newNoteTitle} onChange={e => setNewNoteTitle(e.target.value)} placeholder="Note Title" className="w-full border-b mb-3 p-2 font-bold focus:outline-none" />
-                <textarea value={newNoteContent} onChange={e => setNewNoteContent(e.target.value)} placeholder="Write something..." className="w-full p-2 text-sm focus:outline-none" rows={3}></textarea>
-                <button onClick={saveNote} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold mt-3 flex items-center gap-1"><Save size={16}/> Save Note</button>
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {notes.map(note => (
-                  <div key={note.id} className="bg-white p-4 rounded-xl border shadow-sm relative group">
-                    <h3 className="font-bold text-gray-900">{note.title}</h3>
-                    <p className="text-sm text-gray-600 mt-2">{note.content}</p>
-                    <button onClick={() => deleteDoc(doc(db, "notes", note.id))} className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
-                  </div>
-                ))}
-             </div>
-          </div>
         )}
 
         {/* CUSTOMERS */}
