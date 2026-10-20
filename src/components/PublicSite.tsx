@@ -10,7 +10,6 @@ export default function PublicSite({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [siteDocId, setSiteDocId] = useState<string>('');
   
-  // 🚀 SECURITY CHECK STATE
   const [isOwner, setIsOwner] = useState(false);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -35,9 +34,6 @@ export default function PublicSite({ slug }: { slug: string }) {
           setSiteData(data);
           setSiteDocId(snap.docs[0].id);
           
-          // 🚀 MAGIC SECURITY CHECK: 
-          // Agar logged-in user ki UID, website banane wale ki UID se match karti hai
-          // Toh hi woh owner banega aur edit kar payega.
           if (currentUser && data.userId === currentUser.uid) {
             setIsOwner(true); 
           } else {
@@ -116,9 +112,8 @@ export default function PublicSite({ slug }: { slug: string }) {
   if (!siteData) return <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]"><h1 className="text-2xl font-bold text-gray-800">404 - Site Not Found</h1></div>;
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] font-sans pb-20 relative">
+    <div className="min-h-screen bg-[#f8f9fa] font-sans pb-24 relative">
       
-      {/* 🚀 GEAR ICON: Sirf tab dikhega jab isOwner true ho (Yani wahi banda logged in ho jisne website banayi hai) */}
       {isOwner && (
         <button onClick={() => setIsEditOpen(true)} className="fixed top-6 right-6 z-50 p-3 bg-purple-600 text-white rounded-full shadow-2xl animate-pulse" title="Manage Website">
           <Settings size={24} />
@@ -162,7 +157,6 @@ export default function PublicSite({ slug }: { slug: string }) {
                   <div className="w-full aspect-square bg-gray-50 relative p-4">
                     {prod.image ? <img src={prod.image} alt={prod.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" /> : <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={50}/></div>}
                     
-                    {/* Delete Button: Sirf owner ko dikhega */}
                     {isOwner && <button onClick={() => handleDeleteProduct(idx)} className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition shadow-lg z-20"><Trash2 size={16} /></button>}
                   </div>
                   <div className="p-5 flex flex-col flex-grow">
@@ -177,13 +171,12 @@ export default function PublicSite({ slug }: { slug: string }) {
         )}
       </div>
 
-      {/* 🚀 OWNER EDIT PANEL: Yeh panel bhi sirf owner ko dikhega */}
       {isOwner && isEditOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button onClick={() => setIsEditOpen(false)} className="absolute top-4 right-4 text-gray-400"><X size={24} /></button>
             <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2"><Settings size={20} className="text-purple-600"/> Website Manager</h2>
-            <p className="text-xs text-gray-500 mb-6">Yahan se apni website customize karein.</p>
+            <p className="text-xs text-gray-500 mb-6">Apni website customize karein.</p>
             
             <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 mb-6">
               <h3 className="text-sm font-bold text-purple-800 mb-3 flex items-center gap-2"><UserCircle size={16}/> Update Profile Avatar</h3>
@@ -223,4 +216,4 @@ export default function PublicSite({ slug }: { slug: string }) {
       )}
     </div>
   );
-                    }
+}
