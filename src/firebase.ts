@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // 👈 Auth import kiya
+import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage"; // 🚀 Storage import kiya
 
 const firebaseConfig = {
   apiKey: "AIzaSyAySf4xGt6trm3xT0RFuNXLicjkQTw2fWI",
@@ -13,4 +14,5 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
-export const auth = getAuth(app); // 👈 Auth export kiya
+export const auth = getAuth(app);
+export const storage = getStorage(app); // 🚀 Storage export kiya
