@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { db, storage, auth } from '../firebase';
+import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
   ShieldCheck, Zap, Star, Sparkles, ShoppingBag, Settings, X, Plus, 
   Trash2, Save, Loader2, MessageCircle, Image as ImageIcon, UploadCloud, 
@@ -51,38 +50,54 @@ export default function PublicSite({ slug }: { slug: string }) {
     return () => unsubscribeAuth();
   }, [slug]);
 
-  const handleAvatarUpload = async (e: any) => {
+  // 🚀 Avatar Upload (Base64)
+  const handleAvatarUpload = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Size check (800KB max)
+    if (file.size > 800000) {
+      return alert("Bhai, photo bahut badi hai! Gallery se 800KB se choti photo select karein.");
+    }
+
     setIsAvatarUploading(true);
-    try {
-      const storageRef = ref(storage, `avatars/${siteData.slug}_${Date.now()}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      await updateDoc(doc(db, "ai_sites", siteDocId), { avatarUrl: downloadURL });
-      setSiteData({ ...siteData, avatarUrl: downloadURL });
-      alert("✅ Profile Avatar Updated!");
-    } catch (error) { alert("❌ Avatar upload failed!"); }
-    setIsAvatarUploading(false);
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = async () => {
+      try {
+        const base64String = reader.result as string;
+        await updateDoc(doc(db, "ai_sites", siteDocId), { avatarUrl: base64String });
+        setSiteData({ ...siteData, avatarUrl: base64String });
+        alert("✅ Profile Avatar Updated!");
+      } catch (error) {
+        alert("❌ Avatar upload failed!");
+      }
+      setIsAvatarUploading(false);
+    };
   };
 
-  const handleImageUpload = async (e: any) => {
+  // 🚀 Product Image Upload (Base64)
+  const handleImageUpload = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (file.size > 800000) {
+      return alert("Bhai, photo bahut badi hai! Gallery se 800KB se choti photo select karein.");
+    }
+
     setIsUploading(true);
-    try {
-      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      setNewProdImage(downloadURL);
-      alert("✅ Product Photo Uploaded!");
-    } catch (error) { alert("❌ Photo upload failed!"); }
-    setIsUploading(false);
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = () => {
+      setNewProdImage(reader.result as string);
+      setIsUploading(false);
+      alert("✅ Product Photo Ready!");
+    };
   };
 
   const handleAddProduct = async () => {
     if (!newProdName || !newProdPrice) return alert("Name aur Price zaroori hai!");
-    if (isUploading) return alert("Photo upload ho rahi hai...");
+    if (isUploading) return alert("Photo ready ho rahi hai...");
     
     const newProduct = { name: newProdName, price: newProdPrice, link: newProdLink || "#", image: newProdImage || "" };
     const updatedProducts = [...(siteData.products || []), newProduct];
@@ -147,7 +162,7 @@ export default function PublicSite({ slug }: { slug: string }) {
 
       <header className="max-w-6xl mx-auto px-4 pt-16 pb-24 text-center relative z-10" id="about">
         <div className="flex flex-col items-center justify-center mb-8">
-          <div className={`w-36 h-36 md:w-48 md:h-48 rounded-full border-4 ${isDark ? 'border-white/20' : 'border-purple-100'} p-2 relative shadow-2xl`}>
+          <div className={`w-36 h-36 md:w-48 md:h-48 rounded-full border-4 ${isDark ? 'border-white/20' : 'border-purple-100'} p-2 relative shadow-2xl overflow-hidden`}>
             {siteData.avatarUrl ? (
               <img src={siteData.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
             ) : (
@@ -289,7 +304,6 @@ export default function PublicSite({ slug }: { slug: string }) {
                 Your one-stop destination for premium quality {siteData.categoryName.toLowerCase()} products. We ensure 100% satisfaction and fast delivery.
               </p>
               <div className="flex gap-4">
-                {/* 🚀 FIXED SOCIAL ICONS */}
                 <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-purple-600 hover:border-purple-600'} transition`}><Camera size={18}/></a>
                 <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-red-600 hover:border-red-600'} transition`}><Video size={18}/></a>
                 <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-blue-500 hover:border-blue-500'} transition`}><Send size={18}/></a>
@@ -385,4 +399,4 @@ export default function PublicSite({ slug }: { slug: string }) {
       )}
     </div>
   );
-                  }
+                                         }
