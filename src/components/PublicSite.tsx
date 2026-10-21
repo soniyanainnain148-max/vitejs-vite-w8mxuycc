@@ -18,7 +18,9 @@ export default function PublicSite({ slug }: { slug: string }) {
   const [newProdName, setNewProdName] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('');
   const [newProdLink, setNewProdLink] = useState('');
-  const [newProdImage, setNewProdImage] = useState('');
+  
+  // 🚀 MULTI-IMAGE STATE
+  const [newProdImages, setNewProdImages] = useState<string[]>([]); 
   const [isUploading, setIsUploading] = useState(false);
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
@@ -50,62 +52,99 @@ export default function PublicSite({ slug }: { slug: string }) {
     return () => unsubscribeAuth();
   }, [slug]);
 
-  // 🚀 Avatar Upload (Base64)
+  // 🚀 SMART IMAGE COMPRESSION FUNCTION (Reduces size to fit in Database)
+  const compressImage = (base64Str: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600; // Resize width to max 600px
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          // Compress to JPEG with 60% quality
+          resolve(canvas.toDataURL('image/jpeg', 0.6)); 
+        } else {
+          resolve(base64Str);
+        }
+      };
+    });
+  };
+
+  // 🚀 Multi-Photo Upload Handler
+  const handleMultiImageUpload = async (e: any) => {
+    const files = Array.from(e.target.files) as File[];
+    if (files.length === 0) return;
+
+    if (newProdImages.length + files.length > 4) {
+      return alert("Aap maximum 4 photos upload kar sakte hain!");
+    }
+
+    setIsUploading(true);
+    const base64Array: string[] = [];
+
+    for (const file of files) {
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      
+      // Compress image before saving to DB
+      const compressed = await compressImage(dataUrl);
+      base64Array.push(compressed);
+    }
+
+    setNewProdImages(prev => [...prev, ...base64Array]);
+    setIsUploading(false);
+    alert("✅ Photos Ready!");
+  };
+
+  const removeNewImage = (index: number) => {
+    setNewProdImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleAvatarUpload = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Size check (800KB max)
-    if (file.size > 800000) {
-      return alert("Bhai, photo bahut badi hai! Gallery se 800KB se choti photo select karein.");
-    }
 
     setIsAvatarUploading(true);
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onloadend = async () => {
       try {
-        const base64String = reader.result as string;
-        await updateDoc(doc(db, "ai_sites", siteDocId), { avatarUrl: base64String });
-        setSiteData({ ...siteData, avatarUrl: base64String });
+        const compressed = await compressImage(reader.result as string);
+        await updateDoc(doc(db, "ai_sites", siteDocId), { avatarUrl: compressed });
+        setSiteData({ ...siteData, avatarUrl: compressed });
         alert("✅ Profile Avatar Updated!");
-      } catch (error) {
-        alert("❌ Avatar upload failed!");
-      }
+      } catch (error) { alert("❌ Avatar upload failed!"); }
       setIsAvatarUploading(false);
-    };
-  };
-
-  // 🚀 Product Image Upload (Base64)
-  const handleImageUpload = (e: any) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 800000) {
-      return alert("Bhai, photo bahut badi hai! Gallery se 800KB se choti photo select karein.");
-    }
-
-    setIsUploading(true);
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = () => {
-      setNewProdImage(reader.result as string);
-      setIsUploading(false);
-      alert("✅ Product Photo Ready!");
     };
   };
 
   const handleAddProduct = async () => {
     if (!newProdName || !newProdPrice) return alert("Name aur Price zaroori hai!");
-    if (isUploading) return alert("Photo ready ho rahi hai...");
+    if (newProdImages.length === 0) return alert("Kam se kam 1 photo upload karein!");
     
-    const newProduct = { name: newProdName, price: newProdPrice, link: newProdLink || "#", image: newProdImage || "" };
+    // Save array of images
+    const newProduct = { 
+      name: newProdName, 
+      price: newProdPrice, 
+      link: newProdLink || "#", 
+      images: newProdImages 
+    };
+    
     const updatedProducts = [...(siteData.products || []), newProduct];
-    
     setSiteData({ ...siteData, products: updatedProducts });
+    
     if (siteDocId) await updateDoc(doc(db, "ai_sites", siteDocId), { products: updatedProducts });
     
-    setNewProdName(''); setNewProdPrice(''); setNewProdLink(''); setNewProdImage('');
+    setNewProdName(''); setNewProdPrice(''); setNewProdLink(''); setNewProdImages([]);
     alert("Product Added!");
   };
 
@@ -194,21 +233,6 @@ export default function PublicSite({ slug }: { slug: string }) {
             <MessageCircle size={20} /> Chat With Owner
           </a>
         </div>
-
-        <div className={`mt-16 grid grid-cols-3 gap-4 max-w-3xl mx-auto py-6 border-y ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
-          <div>
-            <h3 className={`text-3xl font-extrabold ${textMain}`}>100+</h3>
-            <p className={`text-xs font-bold uppercase mt-1 ${textSub}`}>Happy Buyers</p>
-          </div>
-          <div>
-            <h3 className={`text-3xl font-extrabold ${textMain}`}>100%</h3>
-            <p className={`text-xs font-bold uppercase mt-1 ${textSub}`}>Trusted</p>
-          </div>
-          <div>
-            <h3 className={`text-3xl font-extrabold ${textMain}`}>4.9<span className="text-yellow-500 text-xl">★</span></h3>
-            <p className={`text-xs font-bold uppercase mt-1 ${textSub}`}>Rating</p>
-          </div>
-        </div>
       </header>
 
       <section className="max-w-6xl mx-auto px-4 py-16 relative z-10" id="products">
@@ -225,14 +249,28 @@ export default function PublicSite({ slug }: { slug: string }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {siteData.products.map((prod: any, idx: number) => (
               <div key={idx} className={`rounded-2xl border transition-all duration-300 hover:-translate-y-2 flex flex-col overflow-hidden group ${cardBg}`}>
-                <div className={`w-full aspect-square relative p-6 ${isDark ? 'bg-black/50' : 'bg-gray-50'}`}>
-                  {prod.image ? (
-                    <img src={prod.image} alt={prod.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center opacity-30"><ImageIcon size={60} className={textMain}/></div>
+                
+                {/* 🚀 MULTI IMAGE SLIDER IN CARD */}
+                <div className={`w-full aspect-square relative p-6 ${isDark ? 'bg-black/50' : 'bg-gray-50'} overflow-hidden`}>
+                  <div className="flex overflow-x-auto snap-x snap-mandatory h-full w-full scrollbar-hide">
+                    {prod.images && prod.images.length > 0 ? (
+                      prod.images.map((img: string, i: number) => (
+                        <img key={i} src={img} alt={`${prod.name}-${i}`} className="w-full h-full object-contain flex-shrink-0 snap-center group-hover:scale-110 transition-transform duration-500" />
+                      ))
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center opacity-30 flex-shrink-0"><ImageIcon size={60} className={textMain}/></div>
+                    )}
+                  </div>
+                  
+                  {/* Photo Count Badge */}
+                  {prod.images && prod.images.length > 1 && (
+                    <div className="absolute bottom-3 right-3 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-sm z-10">
+                      {prod.images.length} Photos
+                    </div>
                   )}
+
                   <div className={`absolute top-4 left-4 px-2 py-1 text-[10px] font-bold rounded uppercase tracking-wider text-white shadow-md ${accentColor}`}>
-                    New Arrival
+                    New
                   </div>
                   {isOwner && (
                     <button onClick={() => handleDeleteProduct(idx)} className="absolute top-4 right-4 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition shadow-lg z-20" title="Delete Product">
@@ -294,7 +332,6 @@ export default function PublicSite({ slug }: { slug: string }) {
       <footer className={`pt-16 pb-8 border-t ${isDark ? 'border-white/10 bg-[#050505]' : 'border-gray-200 bg-white'}`}>
         <div className="max-w-6xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-            
             <div className="md:col-span-2">
               <div className={`flex items-center gap-2 font-extrabold text-2xl mb-4 ${textMain}`}>
                 <div className={`p-2 rounded-xl ${accentColor}`}><Sparkles size={20} className="text-white" /></div>
@@ -309,7 +346,6 @@ export default function PublicSite({ slug }: { slug: string }) {
                 <a href="#" className={`p-2 rounded-full border ${isDark ? 'border-white/20 text-gray-400 hover:text-white hover:border-white' : 'border-gray-300 text-gray-500 hover:text-blue-500 hover:border-blue-500'} transition`}><Send size={18}/></a>
               </div>
             </div>
-
             <div>
               <h4 className={`font-bold mb-4 ${textMain}`}>Quick Links</h4>
               <ul className={`space-y-2 text-sm ${textSub}`}>
@@ -319,7 +355,6 @@ export default function PublicSite({ slug }: { slug: string }) {
                 <li><a href="#" className="hover:underline">Terms of Service</a></li>
               </ul>
             </div>
-
             <div>
               <h4 className={`font-bold mb-4 ${textMain}`}>Get in Touch</h4>
               <ul className={`space-y-3 text-sm ${textSub}`}>
@@ -373,11 +408,23 @@ export default function PublicSite({ slug }: { slug: string }) {
                 </div>
                 
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 mb-1 block uppercase">Product Photo</label>
-                  <div className="relative border-2 border-dashed border-purple-300 rounded-xl p-6 text-center hover:bg-purple-50 cursor-pointer transition">
-                    <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={isUploading} />
-                    {isUploading ? <span className="text-purple-600 text-sm font-bold flex justify-center items-center gap-2"><Loader2 className="animate-spin"/> Uploading...</span> : newProdImage ? <span className="text-green-600 text-sm font-bold flex justify-center items-center gap-2"><Check/> Photo Ready</span> : <span className="text-purple-600 text-sm font-bold flex flex-col items-center gap-1"><UploadCloud size={24}/> Tap to Upload</span>}
+                  <label className="text-[10px] font-bold text-gray-500 mb-1 block uppercase">Product Photos (Max 4)</label>
+                  <div className="relative border-2 border-dashed border-purple-300 rounded-xl p-4 text-center hover:bg-purple-50 cursor-pointer transition">
+                    <input type="file" multiple accept="image/*" onChange={handleMultiImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" disabled={isUploading} />
+                    {isUploading ? <span className="text-purple-600 text-sm font-bold flex justify-center items-center gap-2"><Loader2 className="animate-spin"/> Processing & Compressing...</span> : <span className="text-purple-600 text-sm font-bold flex flex-col items-center gap-1"><UploadCloud size={24}/> Tap to Select Photos</span>}
                   </div>
+                  
+                  {/* Preview Uploaded Photos */}
+                  {newProdImages.length > 0 && (
+                    <div className="flex gap-2 mt-3 overflow-x-auto pb-2">
+                      {newProdImages.map((img, i) => (
+                        <div key={i} className="relative w-16 h-16 flex-shrink-0 border border-gray-300 rounded-lg overflow-hidden group">
+                          <img src={img} className="w-full h-full object-cover" />
+                          <button onClick={() => removeNewImage(i)} className="absolute top-0 right-0 bg-red-500 text-white p-0.5 opacity-0 group-hover:opacity-100 transition"><X size={12}/></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -385,7 +432,7 @@ export default function PublicSite({ slug }: { slug: string }) {
                   <input type="text" placeholder="https://wa.me/91..." value={newProdLink} onChange={e => setNewProdLink(e.target.value)} className="w-full border rounded-xl p-3 text-sm focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200" />
                 </div>
                 
-                <button onClick={handleAddProduct} disabled={isUploading} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 shadow-lg transition mt-2 disabled:opacity-50">
+                <button onClick={handleAddProduct} disabled={isUploading || newProdImages.length === 0} className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 shadow-lg transition mt-2 disabled:opacity-50">
                   <Plus size={20}/> Add Product to Store
                 </button>
               </div>
@@ -399,4 +446,4 @@ export default function PublicSite({ slug }: { slug: string }) {
       )}
     </div>
   );
-                                         }
+            }
